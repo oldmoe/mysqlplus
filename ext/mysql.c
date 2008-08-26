@@ -806,9 +806,7 @@ static VALUE get_result(VALUE obj)
 static VALUE async_query(VALUE obj, VALUE sql)
 {
   send_query(obj,sql);
-  MYSQL* m = GetHandler(obj);
-	int sd = (int)vio_fd(m->net.vio);
-	rb_io_wait_readable(sd);
+	rb_io_wait_readable(socket(obj));
   return get_result(obj);
 }
 
