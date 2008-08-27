@@ -1,22 +1,4 @@
-require 'mysql'
-
-class Mysql
-  attr_accessor :fiber
-  alias :old_query :query
-  def query(sql)
-    if Fiber.current[:neverblock]
-      send_query(sql)
-      @fiber = Fiber.current
-      Fiber.yield
-    else
-      old_query(sql)
-    end
-  end
-  
-  def process_command
-    @fiber.resume get_result
-  end
-end
+require 'mysqlplus'
 
 @count = 10
 @connections = {}

@@ -12,6 +12,7 @@ Gem::Specification.new do |s|
   s.files    = [ 
 		"mysqlplus.gemspec", 
 		"README",
+		"lib/mysqlplus.rb",
 		"test/test_threaded.rb",
 		"test/test_evented.rb",
 		"ext/extconf.rb",

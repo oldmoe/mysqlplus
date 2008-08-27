@@ -1,4 +1,4 @@
-require 'mysql'
+require 'mysqlplus'
 
 $t = Time.now
 $connections = []
@@ -11,7 +11,7 @@ $done = 0
 $t = Time.now
 $count.times do |i|
   Thread.new do
-    $connections[i].async_query('select sleep(0.1)').each{|r|puts "#{i}:#{r}"}
+    $connections[i].async_query('select sleep(1)').each{|r|puts "#{i}:#{r}"}
     $done = $done + 1
     puts Time.now - $t if $done == $count
   end

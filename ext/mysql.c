@@ -5,6 +5,7 @@
  */
 
 #include <ruby.h>
+#include <errno.h>
 #ifndef RSTRING_PTR
 #define RSTRING_PTR(str) RSTRING(str)->ptr
 #endif
@@ -755,24 +756,6 @@ static VALUE socket(VALUE obj)
     return INT2NUM(vio_fd(m->net.vio));
 }
 
-/* setnonblocking */
-/*
-static VALUE setnonblocking(VALUE obj, VALUE new_state)
-{
-    MYSQL* m = GetHandler(obj);
-    my_bool current;
-    return m->net.vio->vioblocking(m->net.vio, new_state, *current);
-}
-*/
-/* isblocking */
-/*
-static VALUE isblocking(VALUE obj)
-{
-    MYSQL* m = GetHandler(obj);
-    return m->net.vio->is_blocking(m->net.vio);
-}
-*/
-
 /* send_query */
 static VALUE send_query(VALUE obj, VALUE sql)
 {
@@ -803,12 +786,15 @@ static VALUE get_result(VALUE obj)
 }
 
 /* async_query */
+/*
+comment it out until I figure out how it works
 static VALUE async_query(VALUE obj, VALUE sql)
 {
   send_query(obj,sql);
 	rb_io_wait_readable(socket(obj));
   return get_result(obj);
 }
+*/
 
 
 #if MYSQL_VERSION_ID >= 40100
@@ -2014,7 +2000,7 @@ void Init_mysql(void)
 #endif
     rb_define_method(cMysql, "query", query, 1);
     rb_define_method(cMysql, "real_query", query, 1);
-    rb_define_method(cMysql, "async_query", async_query, 1);
+    /*rb_define_method(cMysql, "async_query", async_query, 1);*/
     rb_define_method(cMysql, "send_query", send_query, 1);
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "socket", socket, 0);
