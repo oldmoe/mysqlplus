@@ -2,6 +2,21 @@
 
 An enhanced MySQL database driver. With support for async operations and threaded database access.
 
+== Building
+
+  gem build mysqlplus.gemspec
+
+  on OSX, with mysql installed by macports:
+
+    sudo gem install mysqlplus-0.1.0.gem -- --with-mysql-config=/opt/local/lib/mysql5/bin/mysql_config
+
+  on OSX, with x86 mysql (NOT x86_64!) installed from mysql.com:
+
+    sudo env ARCHFLAGS="-arch i386" gem install mysqlplus-0.1.0.gem -- \
+      --with-mysql-dir=/usr/local/mysql \
+      --with-mysql-lib=/usr/local/mysql/lib \
+      --with-mysql-include=/usr/local/mysql/include
+
 === Credits
 
 Roger Pack, for helping in the file descriptor hunt :)
