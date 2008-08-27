@@ -2,21 +2,28 @@ require 'mysqlplus'
 
 $t = Time.now
 $connections = []
+$threads = []
 $count = 10
 
 $count.times do  
-   $connections << Mysql.real_connect('localhost','root')
+  $connections << Mysql.real_connect('localhost','root')
 end
+
+puts 'connection pool ready'
+
 $done = 0
-$t = Time.now
+
 $count.times do |i|
-  Thread.new do
-    $connections[i].async_query('select sleep(1)').each{|r|puts "#{i}:#{r}"}
+  $threads << Thread.new do
+    puts "sending query on connection #{i}"
+    $connections[i].async_query("select sleep(3)").each{ |r|
+      puts "connection #{i} done"
+    }
     $done = $done + 1
-    puts Time.now - $t if $done == $count
   end
 end
 
-loop do
-  break if $done == $count
-end
+puts 'waiting on threads'
+$threads.each{|t| t.join }
+
+puts (Time.now - $t) if $done == $count
