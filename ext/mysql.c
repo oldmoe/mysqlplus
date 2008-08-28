@@ -683,11 +683,37 @@ static VALUE my_stat(VALUE obj)
     return rb_tainted_str_new2(s);
 }
 
+typedef struct
+{
+ MYSQL *mysql_instance;
+ MYSQL_RES **store_it_here;
+
+} mysql_result_to_here_t,
+ *shared_stuff_p;
+
+static VALUE store_result_to_location(void *settings_in)
+{
+   mysql_result_to_here_t *settings = (mysql_result_to_here_t *) settings_in;
+   *(settings->store_it_here) = mysql_store_result(settings->mysql_instance); // this one runs a good long while for very large queries 
+   return Qnil;
+}
+
 /*	store_result()	*/
 static VALUE store_result(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
-    MYSQL_RES* res = mysql_store_result(m);
+    MYSQL_RES* res = NULL;
+#ifndef HAVE_TBR
+    res = mysql_store_result(m);
+    //store_result_to_location(m, &res);
+#else
+    mysql_result_to_here_t linker;
+    linker.mysql_instance = m;
+    linker.store_it_here = &res;
+    //store_result_to_location((void *) &linker);
+    rb_thread_blocking_region(store_result_to_location, (void *) &linker, RB_UBF_DFL, 0);
+#endif
+ 
     if (res == NULL)
 	mysql_raise(m);
     return mysqlres2obj(res);

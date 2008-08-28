@@ -67,4 +67,9 @@ File.open('error_const.h', 'w') do |f|
   end
 end
 
+# check for 1.9
+if have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
+  $CFLAGS += " -DHAVE_TBR"
+end
+
 create_makefile("mysql")
