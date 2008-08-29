@@ -32,7 +32,9 @@ $count.times do |i|
     if do_the_use_query_optimization
       conn.query_with_result=false
       result = conn.async_query(query)
-      result.use_result.each_hash { |h| saved << h }
+      res = result.use_result
+      res.each_hash { |h| saved << h }
+      res.free
     else
       conn.async_query(query).each_hash {|h| saved << h }
     end
