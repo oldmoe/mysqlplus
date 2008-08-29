@@ -8,7 +8,7 @@ An enhanced MySQL database driver. With support for async operations and threade
 
   on OSX with the default mysql installed:
 
-    sudo gem install mysqlplus-0.1.0.gem -- --with-mysql-config=/usr/local/mysql/bin/mysql_config
+    sudo gem install mysqlplus-0.1.0.gem -- --with-mysql-config
 
   on OSX, with mysql installed by macports:
 
