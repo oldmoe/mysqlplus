@@ -4,73 +4,59 @@ SHELL = /bin/sh
 #### Start of system configuration section. ####
 
 srcdir = .
-topdir = /usr/local/include/ruby-1.9.0
-hdrdir = /usr/local/include/ruby-1.9.0
-arch_hdrdir = /usr/local/include/ruby-1.9.0/$(arch)
-VPATH = $(srcdir):$(arch_hdrdir)/ruby:$(hdrdir)/ruby
-prefix = $(DESTDIR)/usr/local
+topdir = /Users/rogerpack/dev/ruby_186_installed/lib/ruby/1.8/i686-darwin9.4.0
+hdrdir = $(topdir)
+VPATH = $(srcdir):$(topdir):$(hdrdir)
+prefix = $(DESTDIR)/Users/rogerpack/dev/ruby_186_installed
 exec_prefix = $(prefix)
-bindir = $(exec_prefix)/bin
-sbindir = $(exec_prefix)/sbin
-libexecdir = $(exec_prefix)/libexec
-datarootdir = $(prefix)/share
-datadir = $(datarootdir)
-sysconfdir = $(prefix)/etc
-sharedstatedir = $(prefix)/com
-localstatedir = $(prefix)/var
-includedir = $(prefix)/include
-oldincludedir = $(DESTDIR)/usr/include
-docdir = $(datarootdir)/doc/$(PACKAGE)
-infodir = $(datarootdir)/info
-htmldir = $(docdir)
-dvidir = $(docdir)
-pdfdir = $(docdir)
-psdir = $(docdir)
-libdir = $(exec_prefix)/lib
-localedir = $(datarootdir)/locale
-mandir = $(datarootdir)/man
 sitedir = $(prefix)/lib/ruby/site_ruby
-vendordir = $(prefix)/lib/ruby/vendor_ruby
-rubyhdrdir = $(includedir)/ruby-$(MAJOR).$(MINOR).$(TEENY)
-sitehdrdir = $(rubyhdrdir)/site_ruby
-vendorhdrdir = $(rubyhdrdir)/vendor_ruby
 rubylibdir = $(libdir)/ruby/$(ruby_version)
+docdir = $(datarootdir)/doc/$(PACKAGE)
+dvidir = $(docdir)
+datarootdir = $(prefix)/share
 archdir = $(rubylibdir)/$(arch)
-sitelibdir = $(sitedir)/$(ruby_version)
+sbindir = $(exec_prefix)/sbin
+psdir = $(docdir)
+localedir = $(datarootdir)/locale
+htmldir = $(docdir)
+datadir = $(datarootdir)
+includedir = $(prefix)/include
+infodir = $(datarootdir)/info
+sysconfdir = $(prefix)/etc
+mandir = $(datarootdir)/man
+libdir = $(exec_prefix)/lib
+sharedstatedir = $(prefix)/com
+oldincludedir = $(DESTDIR)/usr/include
+pdfdir = $(docdir)
 sitearchdir = $(sitelibdir)/$(sitearch)
-vendorlibdir = $(vendordir)/$(ruby_version)
-vendorarchdir = $(vendorlibdir)/$(sitearch)
+bindir = $(exec_prefix)/bin
+localstatedir = $(prefix)/var
+sitelibdir = $(sitedir)/$(ruby_version)
+libexecdir = $(exec_prefix)/libexec
 
 CC = gcc
-CXX = g++
-LIBRUBY = $(LIBRUBY_A)
+LIBRUBY = $(LIBRUBY_SO)
 LIBRUBY_A = lib$(RUBY_SO_NAME)-static.a
-LIBRUBYARG_SHARED = -Wl,-R -Wl,$(libdir) -L$(libdir) 
+LIBRUBYARG_SHARED = -l$(RUBY_SO_NAME)
 LIBRUBYARG_STATIC = -l$(RUBY_SO_NAME)-static
-OUTFLAG = -o 
-COUTFLAG = -o 
 
 RUBY_EXTCONF_H = 
-CFLAGS   =  -fPIC -g -O2 $(cflags) 
-INCFLAGS = -I. -I$(arch_hdrdir) -I$(hdrdir) -I$(srcdir)
-DEFS     = -D_FILE_OFFSET_BITS=64
-CPPFLAGS = -DHAVE_MYSQL_SSL_SET -DHAVE_RB_STR_SET_LEN -DHAVE_MYSQL_MYSQL_H -I/usr/local/include  $(DEFS) $(cppflags)
-CXXFLAGS = $(CFLAGS) -g -O2
-ldflags  = -L.  -rdynamic -Wl,-export-dynamic
-dldflags = 
-archflag = 
-DLDFLAGS = $(ldflags) $(dldflags) $(archflag)
-LDSHARED = $(CC) -shared
-LDSHAREDXX = $(CXX) -shared
+CFLAGS   =  -fno-common -g -O2  -fno-common -pipe -fno-common 
+INCFLAGS = -I. -I. -I/Users/rogerpack/dev/ruby_186_installed/lib/ruby/1.8/i686-darwin9.4.0 -I.
+DEFS     = 
+CPPFLAGS = -DHAVE_MYSQL_SSL_SET -DHAVE_MYSQL_H   -I/usr/local/mysql/include -Os -arch i386 -fno-common
+CXXFLAGS = $(CFLAGS) 
+DLDFLAGS = -L.   
+LDSHARED = cc -dynamic -bundle -undefined suppress -flat_namespace
 AR = ar
 EXEEXT = 
 
 RUBY_INSTALL_NAME = ruby
 RUBY_SO_NAME = ruby
-arch = i686-linux
-sitearch = i686-linux
-ruby_version = 1.9.0
-ruby = /usr/local/bin/ruby
+arch = i686-darwin9.4.0
+sitearch = i686-darwin9.4.0
+ruby_version = 1.8
+ruby = /Users/rogerpack/dev/ruby_186_installed/bin/ruby
 RUBY = $(ruby)
 RM = rm -f
 MAKEDIRS = mkdir -p
@@ -83,8 +69,8 @@ COPY = cp
 
 preload = 
 
-libpath = . $(libdir) /usr/local/lib
-LIBPATH =  -L. -L$(libdir) -Wl,-R$(libdir) -L/usr/local/lib -Wl,-R/usr/local/lib
+libpath = . $(libdir)
+LIBPATH =  -L. -L$(libdir)
 DEFFILE = 
 
 CLEANFILES = mkmf.log
@@ -94,22 +80,20 @@ extout =
 extout_prefix = 
 target_prefix = 
 LOCAL_LIBS = 
-LIBS =  -lmysqlclient -lpthread -lrt -ldl -lcrypt -lm   -lc
+LIBS = $(LIBRUBYARG_SHARED) -L/usr/local/mysql/lib -lmysqlclient -lz -lm  -ldl -lobjc  
 SRCS = mysql.c
 OBJS = mysql.o
-TARGET = mysqlplus
-DLLIB = $(TARGET).so
+TARGET = mysql
+DLLIB = $(TARGET).bundle
 EXTSTATIC = 
-STATIC_LIB =  
+STATIC_LIB = 
 
 RUBYCOMMONDIR = $(sitedir)$(target_prefix)
 RUBYLIBDIR    = $(sitelibdir)$(target_prefix)
 RUBYARCHDIR   = $(sitearchdir)$(target_prefix)
-HDRDIR        = $(rubyhdrdir)/ruby$(target_prefix)
-ARCHHDRDIR    = $(rubyhdrdir)/$(arch)/ruby$(target_prefix)
 
 TARGET_SO     = $(DLLIB)
-CLEANLIBS     = $(TARGET).so $(TARGET).il? $(TARGET).tds $(TARGET).map
+CLEANLIBS     = $(TARGET).bundle $(TARGET).il? $(TARGET).tds $(TARGET).map
 CLEANOBJS     = *.o *.a *.s[ol] *.pdb *.exp *.bak
 
 all:		$(DLLIB)
@@ -143,22 +127,22 @@ site-install-rb: install-rb
 .SUFFIXES: .c .m .cc .cxx .cpp .C .o
 
 .cc.o:
-	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(COUTFLAG)$@ -c $<
+	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $<
 
 .cxx.o:
-	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(COUTFLAG)$@ -c $<
+	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $<
 
 .cpp.o:
-	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(COUTFLAG)$@ -c $<
+	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $<
 
 .C.o:
-	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) $(COUTFLAG)$@ -c $<
+	$(CXX) $(INCFLAGS) $(CPPFLAGS) $(CXXFLAGS) -c $<
 
 .c.o:
-	$(CC) $(INCFLAGS) $(CPPFLAGS) $(CFLAGS) $(COUTFLAG)$@ -c $<
+	$(CC) $(INCFLAGS) $(CPPFLAGS) $(CFLAGS) -c $<
 
 $(DLLIB): $(OBJS)
-	@-$(RM) $(@)
+	@-$(RM) $@
 	$(LDSHARED) -o $@ $(OBJS) $(LIBPATH) $(DLDFLAGS) $(LOCAL_LIBS) $(LIBS)
 
 
