@@ -1064,8 +1064,8 @@ static VALUE fetch_row(VALUE obj)
     return ary;
 }
 
-/*	fetch_hashes_array (internal)	*/
-static VALUE fetch_hashes_array(VALUE obj, VALUE with_table, int build_array, int yield)
+/*	process_all_hashes (internal)	*/
+static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, int yield)
 {
     MYSQL_RES* res = GetMysqlRes(obj);
     unsigned int n = mysql_num_fields(res);
@@ -1078,7 +1078,7 @@ static VALUE fetch_hashes_array(VALUE obj, VALUE with_table, int build_array, in
     VALUE hash;
     VALUE colname;
 
-    if (with_table == Qnil || with_table == Qfalse) {
+    if (with_table == Qfalse) {
         colname = rb_iv_get(obj, "colname");
         if (colname == Qnil) {
             colname = rb_ary_new2(n);
@@ -1267,7 +1267,7 @@ static VALUE each_hash(int argc, VALUE* argv, VALUE obj)
     rb_scan_args(argc, argv, "01", &with_table);
     if (with_table == Qnil)
 	with_table = Qfalse;
-    fetch_hashes_array(obj, with_table, 0, 1);
+    process_all_hashes(obj, with_table, 0, 1);
     return obj;
 }
 
@@ -1282,7 +1282,7 @@ static VALUE all_hashes(int argc, VALUE* argv, VALUE obj)
     rb_scan_args(argc, argv, "01", &with_table);
     if (with_table == Qnil)
         with_table = Qfalse;
-    return fetch_hashes_array(obj, with_table, 1, 0);
+    return process_all_hashes(obj, with_table, 1, 0);
 }
 
 
