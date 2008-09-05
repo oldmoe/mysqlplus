@@ -753,7 +753,7 @@ static VALUE query(VALUE obj, VALUE sql)
 static VALUE socket(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
-    return INT2NUM(vio_fd(m->net.vio));
+    return INT2NUM(m->net.fd);
 }
 
 /* send_query(sql,timeout=nil) */
