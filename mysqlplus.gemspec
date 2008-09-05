@@ -16,8 +16,7 @@ Gem::Specification.new do |s|
 		"test/test_threaded.rb",
 		"test/test_evented.rb",
 		"ext/extconf.rb",
-		"ext/mysql.c",
-		"ext/Makefile"	
+		"ext/mysql.c"
 	]
   s.rdoc_options = ["--main", "README"]
   s.extra_rdoc_files = ["README"]
