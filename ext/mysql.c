@@ -1069,10 +1069,18 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
 {
     MYSQL_RES* res = GetMysqlRes(obj);
     unsigned int n = mysql_num_fields(res);
+    VALUE ary;
+    if(build_array)
+  	ary = rb_ary_new();
     MYSQL_ROW row = mysql_fetch_row(res); // need one early to determine the columns
-    if (row == NULL)
-	return Qnil;
-    unsigned long* lengths = mysql_fetch_lengths(res);
+    if (row == NULL){
+      if(build_array){
+        return ary;
+      }else{
+        return Qnil;
+      }
+    }
+	  unsigned long* lengths = mysql_fetch_lengths(res);
     MYSQL_FIELD* fields = mysql_fetch_fields(res);
     unsigned int i;
     VALUE hash;
@@ -1105,9 +1113,6 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
             rb_iv_set(obj, "tblcolname", colname);
         }
     }
-    VALUE ary;
-    if(build_array)
-	ary = rb_ary_new();
 
     while(row != NULL)
     {
