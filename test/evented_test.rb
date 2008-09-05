@@ -1,10 +1,9 @@
-require 'mysqlplus'
-
+require File.dirname(__FILE__) + '/test_helper'
 @count = 10
 @connections = {}
 
 @count.times do
-   c = Mysql.real_connect('localhost','root',nil)
+   c = Mysql.real_connect('localhost','root','3421260')
    @connections[IO.new(c.socket)] = c
 end
 

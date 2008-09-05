@@ -1,4 +1,4 @@
-require 'mysqlplus'
+require File.dirname(__FILE__) + '/test_helper'
 
 $count = 10
 
@@ -6,7 +6,7 @@ $start = Time.now
 
 $connections = []
 $count.times do  
-  $connections << Mysql.real_connect('localhost','root')
+  $connections << Mysql.real_connect('localhost','root','3421260')
 end
 
 puts 'connection pool ready'
