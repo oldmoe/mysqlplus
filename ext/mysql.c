@@ -1064,6 +1064,72 @@ static VALUE fetch_row(VALUE obj)
     return ary;
 }
 
+/*	process_all_hashes (internal)	*/
+static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, int yield)
+{
+    MYSQL_RES* res = GetMysqlRes(obj);
+    unsigned int n = mysql_num_fields(res);
+    MYSQL_ROW row = mysql_fetch_row(res); // need one early to determine the columns
+    if (row == NULL)
+	return Qnil;
+    unsigned long* lengths = mysql_fetch_lengths(res);
+    MYSQL_FIELD* fields = mysql_fetch_fields(res);
+    unsigned int i;
+    VALUE hash;
+    VALUE colname;
+
+    if (with_table == Qfalse) {
+        colname = rb_iv_get(obj, "colname");
+        if (colname == Qnil) {
+            colname = rb_ary_new2(n);
+            for (i=0; i<n; i++) {
+                VALUE s = rb_tainted_str_new2(fields[i].name);
+                rb_obj_freeze(s);
+                rb_ary_store(colname, i, s);
+            }
+            rb_obj_freeze(colname);
+            rb_iv_set(obj, "colname", colname);
+        }
+    } else {
+        colname = rb_iv_get(obj, "tblcolname");
+        if (colname == Qnil) {
+            colname = rb_ary_new2(n);
+            for (i=0; i<n; i++) {
+                int len = strlen(fields[i].table)+strlen(fields[i].name)+1;
+                VALUE s = rb_tainted_str_new(NULL, len);
+                snprintf(RSTRING_PTR(s), len+1, "%s.%s", fields[i].table, fields[i].name);
+                rb_obj_freeze(s);
+                rb_ary_store(colname, i, s);
+            }
+            rb_obj_freeze(colname);
+            rb_iv_set(obj, "tblcolname", colname);
+        }
+    }
+    VALUE ary;
+    if(build_array)
+	ary = rb_ary_new();
+
+    while(row != NULL)
+    {
+      hash = rb_hash_new();
+      for (i=0; i<n; i++) {
+        rb_hash_aset(hash, rb_ary_entry(colname, i), row[i]? rb_tainted_str_new(row[i], lengths[i]): Qnil);
+      }
+      if(build_array)
+	rb_ary_push(ary, hash);
+      
+      if(yield)
+	rb_yield(hash);
+
+      row = mysql_fetch_row(res);
+    }
+    if(build_array)
+	return ary;
+   
+    if(yield)
+	return obj;
+}
+
 /*	fetch_hash2 (internal)	*/
 static VALUE fetch_hash2(VALUE obj, VALUE with_table)
 {
@@ -1201,10 +1267,24 @@ static VALUE each_hash(int argc, VALUE* argv, VALUE obj)
     rb_scan_args(argc, argv, "01", &with_table);
     if (with_table == Qnil)
 	with_table = Qfalse;
-    while ((hash = fetch_hash2(obj, with_table)) != Qnil)
-	rb_yield(hash);
+    process_all_hashes(obj, with_table, 0, 1);
     return obj;
 }
+
+/* all_hashes(with_table=false) -- returns an array of hashes, one hash per row */
+static VALUE all_hashes(int argc, VALUE* argv, VALUE obj)
+{
+    VALUE with_table;
+    VALUE field_names;
+    VALUE res;
+    unsigned int n,i;
+    check_free(obj);
+    rb_scan_args(argc, argv, "01", &with_table);
+    if (with_table == Qnil)
+        with_table = Qfalse;
+    return process_all_hashes(obj, with_table, 1, 0);
+}
+
 
 /*-------------------------------
  * Mysql::Field object method
@@ -2155,6 +2235,7 @@ void Init_mysql(void)
     rb_define_method(cMysqlRes, "row_tell", row_tell, 0);
     rb_define_method(cMysqlRes, "each", each, 0);
     rb_define_method(cMysqlRes, "each_hash", each_hash, -1);
+    rb_define_method(cMysqlRes, "all_hashes", all_hashes, -1);
 
     /* MysqlField object method */
     rb_define_method(cMysqlField, "name", field_name, 0);
