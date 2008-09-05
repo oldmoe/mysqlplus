@@ -26,6 +26,7 @@ An enhanced MySQL database driver. With support for async operations and threade
 Aman Gupta, for help in threading support and improved tests
 Tomita Masahiro--since this is a fork of his already excellent mysql lib [http://www.tmtm.org/en/mysql/ruby].
 Roger Pack, for helping in the file descriptor hunt :)
+Lourens Naude for 1.9 integration help.
 
 === License
 Ruby License, http://www.ruby-lang.org/en/LICENSE.txt.
