@@ -753,13 +753,17 @@ static VALUE query(VALUE obj, VALUE sql)
 static VALUE socket(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
-    return INT2NUM(vio_fd(m->net.vio));
+    return INT2NUM(m->net.fd);
 }
 
-/* send_query */
-static VALUE send_query(VALUE obj, VALUE sql)
+/* send_query(sql,timeout=nil) */
+static VALUE send_query(int argc, VALUE* argv, VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
+    VALUE sql, timeout;  
+
+    rb_scan_args(argc, argv, "11", &sql, &timeout);
+
     Check_Type(sql, T_STRING);
     if (GetMysqlStruct(obj)->connection == Qfalse) {
         rb_raise(eMysql, "query: not connected");
@@ -2087,7 +2091,7 @@ void Init_mysql(void)
     rb_define_method(cMysql, "query", query, 1);
     rb_define_method(cMysql, "real_query", query, 1);
     /*rb_define_method(cMysql, "async_query", async_query, 1);*/
-    rb_define_method(cMysql, "send_query", send_query, 1);
+    rb_define_method(cMysql, "send_query", send_query, -1);
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
