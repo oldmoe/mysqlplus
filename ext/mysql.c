@@ -756,13 +756,32 @@ static VALUE socket(VALUE obj)
     return INT2NUM(m->net.fd);
 }
 
-/* send_query(sql,timeout=nil) */
-static VALUE send_query(int argc, VALUE* argv, VALUE obj)
+/* readable(timeout=nil) */
+static VALUE readable( int argc, VALUE* argv, VALUE obj )
 {
     MYSQL* m = GetHandler(obj);
-    VALUE sql, timeout;  
 
-    rb_scan_args(argc, argv, "11", &sql, &timeout);
+    VALUE timeout;  
+
+    rb_scan_args(argc, argv, "01", &timeout);
+
+    if ( NIL_P( timeout ) ){
+      timeout = m->net.read_timeout;
+    }
+
+    if( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ){
+      rb_warn( "Socket readable" );
+      return Qtrue;
+    }else{
+      rb_warn( "Socket not readable" );
+      return Qfalse;
+    }
+}
+
+/* send_query(sql) */
+static VALUE send_query(VALUE obj, VALUE sql)
+{
+    MYSQL* m = GetHandler(obj);
 
     Check_Type(sql, T_STRING);
     if (GetMysqlStruct(obj)->connection == Qfalse) {
@@ -789,17 +808,17 @@ static VALUE get_result(VALUE obj)
     return store_result(obj);
 }
 
-/* async_query */
-/*
-comment it out until I figure out how it works
-static VALUE async_query(VALUE obj, VALUE sql)
+/* async_query(sql,timeout=nil) */
+static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
+  VALUE sql, timeout;  
+
+  rb_scan_args(argc, argv, "11", &sql, &timeout);
+
   send_query(obj,sql);
 	rb_io_wait_readable(socket(obj));
   return get_result(obj);
 }
-*/
-
 
 #if MYSQL_VERSION_ID >= 40100
 /*	server_version()	*/
@@ -2090,9 +2109,10 @@ void Init_mysql(void)
 #endif
     rb_define_method(cMysql, "query", query, 1);
     rb_define_method(cMysql, "real_query", query, 1);
-    /*rb_define_method(cMysql, "async_query", async_query, 1);*/
-    rb_define_method(cMysql, "send_query", send_query, -1);
+    rb_define_method(cMysql, "async_query", async_query, -1);
+    rb_define_method(cMysql, "send_query", send_query, 1);
     rb_define_method(cMysql, "get_result", get_result, 0);
+    rb_define_method(cMysql, "readable?", readable, -1);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);

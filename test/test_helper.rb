@@ -10,11 +10,13 @@ class MysqlTest
                 :connections,
                 :connection_signature,
                 :start,
-                :done
+                :done,
+                :c_async_query
   
   def initialize( queries )
     @queries = queries
     @done = []
+    @c_async_query = false
     yield self if block_given?
   end
   
@@ -24,7 +26,10 @@ class MysqlTest
   end
   
   def run!
-    raise NotImplemented
+    c_or_native_ruby_async_query do
+      prepare
+      yield
+    end  
   end
   
   def prepare
@@ -47,6 +52,19 @@ class MysqlTest
   
   def timestamp
     Time.now - @start
+  end
+  
+  protected
+  
+  def c_or_native_ruby_async_query
+    if @c_async_query
+      ENV['MYSQL_C_ASYNC_QUERY'] = '1'
+      log "** using C based async_query"
+    else
+      ENV['MYSQL_C_ASYNC_QUERY'] = '0'
+      log "** using native Ruby async_query"
+    end
+    yield
   end
   
 end
@@ -73,18 +91,22 @@ class EventedMysqlTest < MysqlTest
   end
   
   def run!
-    prepare
-    
-    loop do
-      result = select( @sockets,nil,nil,nil )
-      if result
-        result.first.each do |conn|
-          @connections[conn].get_result.each{|res| log( "Result for socket #{conn.fileno} : #{res}" ) }
-          @done << nil
-          teardown if done?
-        end 
+    super do
+      catch :END_EVENT_LOOP do
+        loop do
+          result = select( @sockets,nil,nil,nil )
+          if result
+            result.first.each do |conn|
+              @connections[conn].get_result.each{|res| log( "Result for socket #{conn.fileno} : #{res}" ) }
+              @done << nil
+              if done?
+                teardown
+              end  
+            end 
+          end
+        end    
       end
-    end    
+    end
   end
   
   def prepare
@@ -95,7 +117,7 @@ class EventedMysqlTest < MysqlTest
   
   def teardown
     log "done"
-    exit
+    throw :END_EVENT_LOOP
   end
   
   protected
@@ -126,11 +148,11 @@ class ThreadedMysqlTest < MysqlTest
   end
   
   def run!
-    prepare
-    
-    with_logging "waiting on threads" do
-      @threads.each{|t| t.join }
-    end
+    super do
+      with_logging "waiting on threads" do
+        @threads.each{|t| t.join }
+      end
+    end  
   end 
   
   def prepare
