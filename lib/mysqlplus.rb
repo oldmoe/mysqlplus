@@ -7,3 +7,11 @@ class Mysql
     get_result
   end
 end
+
+class Mysql::Result
+  def all_hashes
+    rows = []
+    each_hash { |row| rows << row }
+    rows
+  end
+end
