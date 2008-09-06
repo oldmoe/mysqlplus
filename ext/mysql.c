@@ -753,13 +753,17 @@ static VALUE query(VALUE obj, VALUE sql)
 static VALUE socket(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
-    return INT2NUM(vio_fd(m->net.vio));
+    return INT2NUM(m->net.fd);
 }
 
-/* send_query */
-static VALUE send_query(VALUE obj, VALUE sql)
+/* send_query(sql,timeout=nil) */
+static VALUE send_query(int argc, VALUE* argv, VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
+    VALUE sql, timeout;  
+
+    rb_scan_args(argc, argv, "11", &sql, &timeout);
+
     Check_Type(sql, T_STRING);
     if (GetMysqlStruct(obj)->connection == Qfalse) {
         rb_raise(eMysql, "query: not connected");
@@ -1273,12 +1277,12 @@ static VALUE each_hash(int argc, VALUE* argv, VALUE obj)
     if (with_table == Qnil)
 	with_table = Qfalse;
     while ((hash = fetch_hash2(obj, with_table)) != Qnil)
-       rb_yield(hash);
+	rb_yield(hash);
     return obj;
 }
 
-/* all_hashes_experimental(with_table=false) -- returns an array of hashes, one hash per row */
-static VALUE all_hashes_experimental(int argc, VALUE* argv, VALUE obj)
+/* all_hashes(with_table=false) -- returns an array of hashes, one hash per row */
+static VALUE all_hashes(int argc, VALUE* argv, VALUE obj)
 {
     VALUE with_table;
     VALUE field_names;
@@ -2087,7 +2091,7 @@ void Init_mysql(void)
     rb_define_method(cMysql, "query", query, 1);
     rb_define_method(cMysql, "real_query", query, 1);
     /*rb_define_method(cMysql, "async_query", async_query, 1);*/
-    rb_define_method(cMysql, "send_query", send_query, 1);
+    rb_define_method(cMysql, "send_query", send_query, -1);
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
@@ -2241,7 +2245,7 @@ void Init_mysql(void)
     rb_define_method(cMysqlRes, "row_tell", row_tell, 0);
     rb_define_method(cMysqlRes, "each", each, 0);
     rb_define_method(cMysqlRes, "each_hash", each_hash, -1);
-    rb_define_method(cMysqlRes, "all_hashes_experimental", all_hashes_experimental, -1);
+    /*rb_define_method(cMysqlRes, "all_hashes", all_hashes, -1);*/
 
     /* MysqlField object method */
     rb_define_method(cMysqlField, "name", field_name, 0);
