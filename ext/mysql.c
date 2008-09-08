@@ -711,17 +711,16 @@ static VALUE store_result(VALUE obj)
     MYSQL_RES* res = NULL;
 #ifndef HAVE_TBR
     res = mysql_store_result(m);
-    //store_result_to_location(m, &res);
 #else
     mysql_result_to_here_t linker;
     linker.mysql_instance = m;
     linker.store_it_here = &res;
-    //store_result_to_location((void *) &linker);
-    rb_thread_blocking_region(store_result_to_location, (void *) &linker, RB_UBF_DFL, 0);
+    rb_thread_blocking_region(store_result_to_location, (void *) &linker, RUBY_UBF_IO, 0); /* not sure if this should be RUBY_UBF_IO or RUBY_UBF_PROCESS here -- see Ruby 1.9 ChangeLog */
 #endif
  
     if (res == NULL)
 	mysql_raise(m);
+
     return mysqlres2obj(res);
 }
 

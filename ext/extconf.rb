@@ -31,8 +31,9 @@ else
   exit 1
 end
 
-if have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
-  flags << "-DHAVE_TBR"
+# check for 1.9
+if have_func('rb_thread_blocking_region') and have_macro('RUBY_UBF_IO', 'ruby.h')
+  $CFLAGS += " -DHAVE_TBR "
 end
 
 # make mysql constant
@@ -69,11 +70,6 @@ File.open('error_const.h', 'w') do |f|
   error_syms.each do |s|
     f.puts "    rb_define_mysql_const(#{s});"
   end
-end
-
-# check for 1.9
-if have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
-  $CFLAGS += " -DHAVE_TBR"
 end
 
 create_makefile("mysql")
