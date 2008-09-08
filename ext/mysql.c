@@ -60,6 +60,7 @@ struct mysql {
     MYSQL handler;
     char connection;
     char query_with_result;
+    char blocking;
 };
 
 struct mysql_res {
@@ -268,6 +269,11 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass)
 
     myp->handler.reconnect = 0;
     myp->connection = Qtrue;
+    
+    my_bool was_blocking;
+    vio_blocking(myp->handler.net.vio, 0, &was_blocking);    
+    myp->blocking = vio_is_blocking( myp->handler.net.vio );
+
     myp->query_with_result = Qtrue;
     rb_obj_call_init(obj, argc, argv);
 
@@ -756,13 +762,31 @@ static VALUE socket(VALUE obj)
     return INT2NUM(m->net.fd);
 }
 
-/* send_query(sql,timeout=nil) */
-static VALUE send_query(int argc, VALUE* argv, VALUE obj)
+/* blocking */
+static VALUE blocking(VALUE obj){
+  return ( GetMysqlStruct(obj)->blocking ? Qtrue : Qfalse );
+}
+
+/* readable(timeout=nil) */
+static VALUE readable( int argc, VALUE* argv, VALUE obj )
 {
     MYSQL* m = GetHandler(obj);
-    VALUE sql, timeout;  
 
-    rb_scan_args(argc, argv, "11", &sql, &timeout);
+    VALUE timeout;  
+    
+    rb_scan_args(argc, argv, "01", &timeout);
+
+    if ( NIL_P( timeout ) ){
+      timeout = m->net.read_timeout;
+    }
+
+    return ( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ? Qtrue : Qfalse );
+}
+
+/* send_query(sql) */
+static VALUE send_query(VALUE obj, VALUE sql)
+{
+    MYSQL* m = GetHandler(obj);
 
     Check_Type(sql, T_STRING);
     if (GetMysqlStruct(obj)->connection == Qfalse) {
@@ -789,17 +813,46 @@ static VALUE get_result(VALUE obj)
     return store_result(obj);
 }
 
-/* async_query */
-/*
-comment it out until I figure out how it works
-static VALUE async_query(VALUE obj, VALUE sql)
+/* async_query(sql,timeout=nil) */
+static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
+  MYSQL* m = GetHandler(obj); 
+  VALUE sql, timeout;
+  fd_set read;
+  int ret;
+
+  rb_scan_args(argc, argv, "11", &sql, &timeout);
+
   send_query(obj,sql);
-	rb_io_wait_readable(socket(obj));
+
+  if (NIL_P(timeout)) {
+    timeout = m->net.read_timeout;
+  }
+
+  VALUE args[1];
+  args[0] = timeout;
+
+  struct timeval tv = { tv_sec: timeout, tv_usec: 0 };
+
+  for(;;) {
+    FD_ZERO(&read);
+    FD_SET(m->net.fd, &read);
+      ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
+      if (ret < 0) {
+        rb_sys_fail(0);
+      }
+              
+      if (ret == 0) {
+        continue;
+      }
+
+      if (readable(1, (VALUE *)args, obj) == Qtrue) {
+        break;
+      }
+  }
+
   return get_result(obj);
 }
-*/
-
 
 #if MYSQL_VERSION_ID >= 40100
 /*	server_version()	*/
@@ -2090,9 +2143,11 @@ void Init_mysql(void)
 #endif
     rb_define_method(cMysql, "query", query, 1);
     rb_define_method(cMysql, "real_query", query, 1);
-    /*rb_define_method(cMysql, "async_query", async_query, 1);*/
-    rb_define_method(cMysql, "send_query", send_query, -1);
+    rb_define_method(cMysql, "async_query", async_query, -1);
+    rb_define_method(cMysql, "send_query", send_query, 1);
     rb_define_method(cMysql, "get_result", get_result, 0);
+    rb_define_method(cMysql, "readable?", readable, -1);
+    rb_define_method(cMysql, "blocking?", blocking, 0);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);
