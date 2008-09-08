@@ -2143,7 +2143,7 @@ void Init_mysql(void)
 #endif
     rb_define_method(cMysql, "query", query, 1);
     rb_define_method(cMysql, "real_query", query, 1);
-    rb_define_method(cMysql, "async_query", async_query, -1);
+    rb_define_method(cMysql, "c_async_query", async_query, -1);
     rb_define_method(cMysql, "send_query", send_query, 1);
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "readable?", readable, -1);

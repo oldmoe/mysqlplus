@@ -28,10 +28,8 @@ class MysqlTest
   
   def run!
     c_or_native_ruby_async_query do
-      with_blocking_status do
-        prepare
-        yield
-      end  
+      prepare
+      yield
     end  
   end
   
@@ -61,22 +59,16 @@ class MysqlTest
   
   def c_or_native_ruby_async_query
     if @c_async_query
-      ENV['MYSQL_C_ASYNC_QUERY'] = '1'
       log "** using C based async_query"
     else
-      ENV['MYSQL_C_ASYNC_QUERY'] = '0'
       log "** using native Ruby async_query"
     end
     yield
   end
   
-  def with_blocking_status
-    if @log_blocking_status
-      ENV['MYSQL_BLOCKING_STATUS'] = '1'
-    else
-      ENV['MYSQL_BLOCKING_STATUS'] = '0'
-    end
-    yield
+  def c_or_native_async_query( connection, sql, timeout = nil )
+    method = @c_async_query ? :c_async_query : :async_query
+    connection.send( method, sql, timeout )
   end
   
 end
@@ -174,7 +166,7 @@ class ThreadedMysqlTest < MysqlTest
 
           log "sending query on connection #{conn}"
 
-          @connections[conn].async_query( "select sleep(3)" ).each do |result|
+          c_or_native_async_query( @connections[conn], "select sleep(3)" ).each do |result|
             log "connection #{conn} done"
           end 
         
