@@ -60,6 +60,7 @@ struct mysql {
     MYSQL handler;
     char connection;
     char query_with_result;
+    char blocking;
 };
 
 struct mysql_res {
@@ -268,6 +269,11 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass)
 
     myp->handler.reconnect = 0;
     myp->connection = Qtrue;
+    
+    my_bool was_blocking;
+    vio_blocking(myp->handler.net.vio, 0, &was_blocking);    
+    myp->blocking = vio_is_blocking( myp->handler.net.vio );
+
     myp->query_with_result = Qtrue;
     rb_obj_call_init(obj, argc, argv);
 
@@ -754,6 +760,11 @@ static VALUE socket(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
     return INT2NUM(m->net.fd);
+}
+
+/* blocking */
+static VALUE blocking(VALUE obj){
+  return ( GetMysqlStruct(obj)->blocking ? Qtrue : Qfalse );
 }
 
 /* readable(timeout=nil) */
@@ -2113,6 +2124,7 @@ void Init_mysql(void)
     rb_define_method(cMysql, "send_query", send_query, 1);
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "readable?", readable, -1);
+    rb_define_method(cMysql, "blocking?", blocking, 0);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);

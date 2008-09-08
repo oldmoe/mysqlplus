@@ -11,7 +11,8 @@ class MysqlTest
                 :connection_signature,
                 :start,
                 :done,
-                :c_async_query
+                :c_async_query,
+                :log_blocking_status
   
   def initialize( queries )
     @queries = queries
@@ -27,8 +28,10 @@ class MysqlTest
   
   def run!
     c_or_native_ruby_async_query do
-      prepare
-      yield
+      with_blocking_status do
+        prepare
+        yield
+      end  
     end  
   end
   
@@ -63,6 +66,15 @@ class MysqlTest
     else
       ENV['MYSQL_C_ASYNC_QUERY'] = '0'
       log "** using native Ruby async_query"
+    end
+    yield
+  end
+  
+  def with_blocking_status
+    if @log_blocking_status
+      ENV['MYSQL_BLOCKING_STATUS'] = '1'
+    else
+      ENV['MYSQL_BLOCKING_STATUS'] = '0'
     end
     yield
   end
