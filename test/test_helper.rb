@@ -7,17 +7,20 @@ class MysqlTest
   end
   
   attr_accessor :queries,
+                :context,
                 :connections,
                 :connection_signature,
                 :start,
                 :done,
                 :c_async_query,
-                :log_blocking_status
+                :per_query_overhead
   
-  def initialize( queries )
+  def initialize( queries, context = '' )
     @queries = queries
+    @context = context
     @done = []
     @c_async_query = false
+    @per_query_overhead = 3
     yield self if block_given?
   end
   
@@ -28,11 +31,18 @@ class MysqlTest
   
   def run!
     c_or_native_ruby_async_query do
+      present_context if context?
       prepare
       yield
     end  
   end
   
+  def per_query_overhead=( overhead )
+    @per_query_overhead = ( overhead == :random ) ? rand() : overhead
+  end
+  
+  protected
+
   def prepare
     raise NotImplemented
   end
@@ -54,8 +64,16 @@ class MysqlTest
   def timestamp
     Time.now - @start
   end
+
+  def context?
+    @context != ''
+  end
   
-  protected
+  def present_context
+    log "#############################################"
+    log "#  #{@context}" 
+    log "#############################################"   
+  end
   
   def c_or_native_ruby_async_query
     if @c_async_query
@@ -77,10 +95,10 @@ class EventedMysqlTest < MysqlTest
   
   attr_accessor :sockets
   
-  def initialize( queries )
+  def initialize( queries, context = '' )
     @sockets = []
     @connections = {}
-    super( queries )
+    super( queries, context )
   end  
   
   def setup( &block )
@@ -113,9 +131,11 @@ class EventedMysqlTest < MysqlTest
     end
   end
   
+  protected
+  
   def prepare
     @connections.each_value do |conn|
-      conn.send_query( "select sleep(3)" ) 
+      conn.send_query( "select sleep(#{@per_query_overhead})" ) 
     end
   end
   
@@ -123,8 +143,6 @@ class EventedMysqlTest < MysqlTest
     log "done"
     throw :END_EVENT_LOOP
   end
-  
-  protected
   
   def done?
     @done.size == @queries
@@ -136,10 +154,10 @@ class ThreadedMysqlTest < MysqlTest
   
   attr_accessor :threads
   
-  def initialize( queries )
+  def initialize( queries, context = '' )
     @connections = []
     @threads = []
-    super( queries )
+    super( queries, context )
   end
   
   def setup( &block )
@@ -159,6 +177,8 @@ class ThreadedMysqlTest < MysqlTest
     end  
   end 
   
+  protected
+  
   def prepare
     with_logging "prepare" do
       @queries.times do |conn|
@@ -166,7 +186,7 @@ class ThreadedMysqlTest < MysqlTest
 
           log "sending query on connection #{conn}"
 
-          c_or_native_async_query( @connections[conn], "select sleep(3)" ).each do |result|
+          c_or_native_async_query( @connections[conn], "select sleep(#{@per_query_overhead})" ).each do |result|
             log "connection #{conn} done"
           end 
         
