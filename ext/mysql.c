@@ -773,20 +773,14 @@ static VALUE readable( int argc, VALUE* argv, VALUE obj )
     MYSQL* m = GetHandler(obj);
 
     VALUE timeout;  
-
+    
     rb_scan_args(argc, argv, "01", &timeout);
 
     if ( NIL_P( timeout ) ){
       timeout = m->net.read_timeout;
     }
 
-    if( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ){
-      rb_warn( "Socket readable" );
-      return Qtrue;
-    }else{
-      rb_warn( "Socket not readable" );
-      return Qfalse;
-    }
+    return ( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ? Qtrue : Qfalse );
 }
 
 /* send_query(sql) */
@@ -822,12 +816,41 @@ static VALUE get_result(VALUE obj)
 /* async_query(sql,timeout=nil) */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
-  VALUE sql, timeout;  
+  MYSQL* m = GetHandler(obj); 
+  VALUE sql, timeout;
+  fd_set read;
+  int ret;
 
   rb_scan_args(argc, argv, "11", &sql, &timeout);
 
   send_query(obj,sql);
-	rb_io_wait_readable(socket(obj));
+
+  if (NIL_P(timeout)) {
+    timeout = m->net.read_timeout;
+  }
+
+  VALUE args[1];
+  args[0] = timeout;
+
+  struct timeval tv = { tv_sec: timeout, tv_usec: 0 };
+
+  for(;;) {
+    FD_ZERO(&read);
+    FD_SET(m->net.fd, &read);
+      ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
+      if (ret < 0) {
+        rb_sys_fail(0);
+      }
+              
+      if (ret == 0) {
+        continue;
+      }
+
+      if (readable(1, (VALUE *)args, obj) == Qtrue) {
+        break;
+      }
+  }
+
   return get_result(obj);
 }
 
