@@ -1129,7 +1129,7 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
     VALUE ary;
     if(build_array)
   	ary = rb_ary_new();
-    MYSQL_ROW row = mysql_fetch_row(res); // need one early to determine the columns
+    MYSQL_ROW row = mysql_fetch_row(res); // grab one off the top, to determine the rows
     if (row == NULL){
       if(build_array){
         return ary;
@@ -1137,7 +1137,6 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
         return Qnil;
       }
     }
-	  unsigned long* lengths = mysql_fetch_lengths(res);
     MYSQL_FIELD* fields = mysql_fetch_fields(res);
     unsigned int i;
     VALUE hash;
@@ -1171,9 +1170,11 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
         }
     }
 
+    unsigned long* lengths = NULL;
     while(row != NULL)
     {
       hash = rb_hash_new();
+      lengths = mysql_fetch_lengths(res);
       for (i=0; i<n; i++) {
         rb_hash_aset(hash, rb_ary_entry(colname, i), row[i]? rb_tainted_str_new(row[i], lengths[i]): Qnil);
       }
@@ -1185,6 +1186,8 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
 
       row = mysql_fetch_row(res);
     }
+
+    /* pass back apropriate return values */
     if(build_array)
 	return ary;
    
@@ -1207,7 +1210,7 @@ static VALUE fetch_hash2(VALUE obj, VALUE with_table)
 	return Qnil;
     hash = rb_hash_new();
 
-    if (with_table == Qnil || with_table == Qfalse) {
+    if (with_table == Qfalse) {
         colname = rb_iv_get(obj, "colname");
         if (colname == Qnil) {
             colname = rb_ary_new2(n);
@@ -1324,13 +1327,11 @@ static VALUE each(VALUE obj)
 static VALUE each_hash(int argc, VALUE* argv, VALUE obj)
 {
     VALUE with_table;
-    VALUE hash;
     check_free(obj);
     rb_scan_args(argc, argv, "01", &with_table);
     if (with_table == Qnil)
 	with_table = Qfalse;
-    while ((hash = fetch_hash2(obj, with_table)) != Qnil)
-	rb_yield(hash);
+    process_all_hashes(obj, with_table, 0, 1);
     return obj;
 }
 
@@ -1338,9 +1339,6 @@ static VALUE each_hash(int argc, VALUE* argv, VALUE obj)
 static VALUE all_hashes(int argc, VALUE* argv, VALUE obj)
 {
     VALUE with_table;
-    VALUE field_names;
-    VALUE res;
-    unsigned int n,i;
     check_free(obj);
     rb_scan_args(argc, argv, "01", &with_table);
     if (with_table == Qnil)
@@ -2300,7 +2298,7 @@ void Init_mysql(void)
     rb_define_method(cMysqlRes, "row_tell", row_tell, 0);
     rb_define_method(cMysqlRes, "each", each, 0);
     rb_define_method(cMysqlRes, "each_hash", each_hash, -1);
-    /*rb_define_method(cMysqlRes, "all_hashes", all_hashes, -1);*/
+    rb_define_method(cMysqlRes, "all_hashes", all_hashes, -1);
 
     /* MysqlField object method */
     rb_define_method(cMysqlField, "name", field_name, 0);
