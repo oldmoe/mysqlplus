@@ -13,7 +13,8 @@ class MysqlTest
                 :start,
                 :done,
                 :c_async_query,
-                :per_query_overhead
+                :per_query_overhead,
+                :timeout
   
   def initialize( queries, context = '' )
     @queries = queries
@@ -21,6 +22,7 @@ class MysqlTest
     @done = []
     @c_async_query = false
     @per_query_overhead = 3
+    @timeout = 20
     yield self if block_given?
   end
   
@@ -186,7 +188,7 @@ class ThreadedMysqlTest < MysqlTest
 
           log "sending query on connection #{conn}"
 
-          c_or_native_async_query( @connections[conn], "select sleep(#{@per_query_overhead})" ).each do |result|
+          c_or_native_async_query( @connections[conn], "select sleep(#{@per_query_overhead})", @timeout ).each do |result|
             log "connection #{conn} done"
           end 
         

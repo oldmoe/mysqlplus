@@ -269,10 +269,13 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass)
 
     myp->handler.reconnect = 0;
     myp->connection = Qtrue;
-    
+
     my_bool was_blocking;
+
     vio_blocking(myp->handler.net.vio, 0, &was_blocking);    
     myp->blocking = vio_is_blocking( myp->handler.net.vio );
+
+    vio_fastsend( myp->handler.net.vio );
 
     myp->query_with_result = Qtrue;
     rb_obj_call_init(obj, argc, argv);
@@ -762,6 +765,14 @@ static VALUE socket(VALUE obj)
     return INT2NUM(m->net.fd);
 }
 
+/* socket_type */
+static VALUE socket_type(VALUE obj)
+{
+    MYSQL* m = GetHandler(obj);
+    VALUE description = vio_description( m->net.vio );
+    return NILorSTRING( description );
+}
+
 /* blocking */
 static VALUE blocking(VALUE obj){
   return ( GetMysqlStruct(obj)->blocking ? Qtrue : Qfalse );
@@ -825,28 +836,27 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 
   send_query(obj,sql);
 
-  if (NIL_P(timeout)) {
-    timeout = m->net.read_timeout;
-  }
+  timeout = ( NIL_P(timeout) ? m->net.read_timeout : INT2NUM(timeout) );
 
   VALUE args[1];
   args[0] = timeout;
 
   struct timeval tv = { tv_sec: timeout, tv_usec: 0 };
 
+  FD_ZERO(&read);
+  FD_SET(m->net.fd, &read);
+
   for(;;) {
-    FD_ZERO(&read);
-    FD_SET(m->net.fd, &read);
       ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
       if (ret < 0) {
-        rb_sys_fail(0);
+        rb_raise(eMysql, "query: timeout");
       }
               
       if (ret == 0) {
         continue;
       }
 
-      if (readable(1, (VALUE *)args, obj) == Qtrue) {
+      if ( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ) {
         break;
       }
   }
@@ -2147,6 +2157,7 @@ void Init_mysql(void)
     rb_define_method(cMysql, "readable?", readable, -1);
     rb_define_method(cMysql, "blocking?", blocking, 0);
     rb_define_method(cMysql, "socket", socket, 0);
+    rb_define_method(cMysql, "socket_type", socket_type, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);
     rb_define_method(cMysql, "select_db", select_db, 1);
