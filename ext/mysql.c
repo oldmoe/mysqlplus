@@ -827,7 +827,6 @@ static VALUE schedule(VALUE obj, VALUE timeout)
 {
     MYSQL* m = GetHandler(obj);
     fd_set read;
-    int ret;
 
     timeout = ( NIL_P(timeout) ? m->net.read_timeout : INT2NUM(timeout) );
 
@@ -836,20 +835,9 @@ static VALUE schedule(VALUE obj, VALUE timeout)
     FD_ZERO(&read);
     FD_SET(m->net.fd, &read);
 
-    for(;;) {
-      ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
-      if (ret < 0) {
-        rb_raise(eMysql, "query: timeout");
-      }
-            
-      if (ret == 0) {
-        continue;
-      }
-
-      if ( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ) {
-        break;
-      }
-  }
+    if (rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv) < 0) {
+      rb_raise(eMysql, "query: timeout");
+    }
 
 }
 
