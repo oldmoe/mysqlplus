@@ -32,7 +32,7 @@ else
 end
 
 if have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
-  flags << "-DHAVE_TBR"
+  cflags << "-DHAVE_TBR"
 end
 
 # make mysql constant
