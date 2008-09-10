@@ -764,7 +764,6 @@ static VALUE socket(VALUE obj)
     MYSQL* m = GetHandler(obj);
     return INT2NUM(m->net.fd);
 }
-
 /* socket_type */
 static VALUE socket_type(VALUE obj)
 {
@@ -824,34 +823,25 @@ static VALUE get_result(VALUE obj)
     return store_result(obj);
 }
 
-/* async_query(sql,timeout=nil) */
-static VALUE async_query(int argc, VALUE* argv, VALUE obj)
+static VALUE schedule(VALUE obj, VALUE timeout)
 {
-  MYSQL* m = GetHandler(obj); 
-  VALUE sql, timeout;
-  fd_set read;
-  int ret;
+    MYSQL* m = GetHandler(obj);
+    fd_set read;
+    int ret;
 
-  rb_scan_args(argc, argv, "11", &sql, &timeout);
+    timeout = ( NIL_P(timeout) ? m->net.read_timeout : INT2NUM(timeout) );
 
-  send_query(obj,sql);
+    struct timeval tv = { tv_sec: timeout, tv_usec: 0 };
 
-  timeout = ( NIL_P(timeout) ? m->net.read_timeout : INT2NUM(timeout) );
+    FD_ZERO(&read);
+    FD_SET(m->net.fd, &read);
 
-  VALUE args[1];
-  args[0] = timeout;
-
-  struct timeval tv = { tv_sec: timeout, tv_usec: 0 };
-
-  FD_ZERO(&read);
-  FD_SET(m->net.fd, &read);
-
-  for(;;) {
+    for(;;) {
       ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
       if (ret < 0) {
         rb_raise(eMysql, "query: timeout");
       }
-              
+            
       if (ret == 0) {
         continue;
       }
@@ -860,6 +850,20 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
         break;
       }
   }
+
+}
+
+/* async_query(sql,timeout=nil) */
+static VALUE async_query(int argc, VALUE* argv, VALUE obj)
+{
+  MYSQL* m = GetHandler(obj); 
+  VALUE sql, timeout;
+
+  rb_scan_args(argc, argv, "11", &sql, &timeout);
+
+  send_query(obj,sql);
+
+  schedule(obj, timeout);
 
   return get_result(obj);
 }

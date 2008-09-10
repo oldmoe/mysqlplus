@@ -12,7 +12,7 @@ class MysqlTest
                 :connection_signature,
                 :start,
                 :done,
-                :c_async_query,
+                :query_with,
                 :per_query_overhead,
                 :timeout
   
@@ -20,7 +20,7 @@ class MysqlTest
     @queries = queries
     @context = context
     @done = []
-    @c_async_query = false
+    @query_with = :async_query
     @per_query_overhead = 3
     @timeout = 20
     yield self if block_given?
@@ -78,7 +78,7 @@ class MysqlTest
   end
   
   def c_or_native_ruby_async_query
-    if @c_async_query
+    if @query_with == :c_async_query
       log "** using C based async_query"
     else
       log "** using native Ruby async_query"
@@ -86,9 +86,8 @@ class MysqlTest
     yield
   end
   
-  def c_or_native_async_query( connection, sql, timeout = nil )
-    method = @c_async_query ? :c_async_query : :async_query
-    connection.send( method, sql, timeout )
+  def dispatch_query( connection, sql, timeout = nil )
+    connection.send( @query_with, sql, timeout )
   end
   
 end
@@ -188,7 +187,7 @@ class ThreadedMysqlTest < MysqlTest
 
           log "sending query on connection #{conn}"
 
-          c_or_native_async_query( @connections[conn], "select sleep(#{@per_query_overhead})", @timeout ).each do |result|
+          dispatch_query( @connections[conn], "select sleep(#{@per_query_overhead})", @timeout ).each do |result|
             log "connection #{conn} done"
           end 
         
