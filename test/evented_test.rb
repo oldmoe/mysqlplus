@@ -1,5 +1,11 @@
 require File.dirname(__FILE__) + '/test_helper'
 
+EventedMysqlTest.new( 10, "Evented, very small overhead" ) do |test|
+  test.setup{ Mysql.real_connect('localhost','root') }
+  test.per_query_overhead = 0.005
+  test.run!
+end
+
 EventedMysqlTest.new( 10, "Evented, small overhead" ) do |test|
   test.setup{ Mysql.real_connect('localhost','root') }
   test.per_query_overhead = 0.1

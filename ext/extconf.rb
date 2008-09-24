@@ -1,5 +1,6 @@
 require 'mkmf'
 
+
 if /mswin32/ =~ RUBY_PLATFORM
   inc, lib = dir_config('mysql')
   exit 1 unless have_library("libmysql")
