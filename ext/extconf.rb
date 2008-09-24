@@ -32,7 +32,7 @@ else
   exit 1
 end
 
-if have_func('rb_thread_blocking_region') and have_macro('RB_UBF_DFL', 'ruby.h')
+if have_func('rb_thread_blocking_region') and have_macro('RUBY_UBF_IO', 'ruby.h')
   $CPPFLAGS << " -DHAVE_TBR"
 end
 
