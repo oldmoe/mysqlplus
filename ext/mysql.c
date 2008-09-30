@@ -231,8 +231,13 @@ static VALUE init(VALUE klass)
     return obj;
 }
 
+#if MYSQL_VERSION_ID >= 32200
+int mysql_real_connect_nonblocking() {}
+
+#endif
+
 /*	real_connect(host=nil, user=nil, passwd=nil, db=nil, port=nil, sock=nil, flag=nil)	*/
-static VALUE real_connect(int argc, VALUE* argv, VALUE klass)
+static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets run */
 {
     VALUE host, user, passwd, db, port, sock, flag;
     char *h, *u, *p, *d, *s;
@@ -258,7 +263,7 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass)
 
     obj = Data_Make_Struct(klass, struct mysql, 0, free_mysql, myp);
 #if MYSQL_VERSION_ID >= 32200
-    mysql_init(&myp->handler);
+    mysql_init(&myp->handler); /* we get here */
     if (mysql_real_connect(&myp->handler, h, u, p, d, pp, s, f) == NULL)
 #elif MYSQL_VERSION_ID >= 32115
     if (mysql_real_connect(&myp->handler, h, u, p, pp, s, f) == NULL)
@@ -324,6 +329,7 @@ static VALUE client_version(VALUE obj)
 /*	real_connect(host=nil, user=nil, passwd=nil, db=nil, port=nil, sock=nil, flag=nil)	*/
 static VALUE real_connect2(int argc, VALUE* argv, VALUE obj)
 {
+	printf("conn2\n");
     VALUE host, user, passwd, db, port, sock, flag;
     char *h, *u, *p, *d, *s;
     unsigned int pp, f;
