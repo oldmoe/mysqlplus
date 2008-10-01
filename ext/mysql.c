@@ -1128,7 +1128,7 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
 {
     MYSQL_RES* res = GetMysqlRes(obj);
     unsigned int n = mysql_num_fields(res);
-    VALUE ary;
+    VALUE ary = Qnil;
     if(build_array)
   	ary = rb_ary_new();
     MYSQL_ROW row = mysql_fetch_row(res); // grab one off the top, to determine the rows
@@ -1195,6 +1195,8 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
    
     if(yield)
 	return obj;
+
+    return Qnil; /* we should never get here -- this takes out a compiler warning */
 }
 
 /*	fetch_hash2 (internal)	*/
