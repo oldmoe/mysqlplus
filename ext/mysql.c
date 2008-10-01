@@ -233,7 +233,6 @@ static VALUE init(VALUE klass)
 }
 
 #if MYSQL_VERSION_ID >= 32200
-int mysql_real_connect_nonblocking() {}
 
 typedef struct
 {
@@ -265,7 +264,7 @@ void *rb_thread_blocking_region_variable_params(int number, ...)
   }
   va_end(param_pt);
 
-  rb_thread_blocking_region(&call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
+  rb_thread_blocking_region((rb_blocking_function_t *)call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
 
   return param_storer.return_val;
 
@@ -289,7 +288,10 @@ static void call_single_function_rb_thread_blocking_region(void *arg_holder_in)
 	void * (*pt2Func)(void *, void *, void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
 	result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5], params_and_func->args[6], params_and_func->args[7]);
    }else 
-	printf("UN nonwn %d\n", param_count);
+   {
+	printf("UN nonwn param count--please add it! %d\n", param_count);
+        result = Qnil;
+  }
 
    params_and_func->return_val = result;
 }
@@ -326,7 +328,7 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 #if MYSQL_VERSION_ID >= 32200
 	printf("conn5 -- \n");
     mysql_init(&myp->handler); /* we get here */
-    int answer = rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f); 
+    VALUE answer = rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f); 
     if (answer == NULL)
 #elif MYSQL_VERSION_ID >= 32115
     if (mysql_real_connect(&myp->handler, h, u, p, pp, s, f) == NULL)
@@ -1221,7 +1223,7 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
 {
     MYSQL_RES* res = GetMysqlRes(obj);
     unsigned int n = mysql_num_fields(res);
-    VALUE ary;
+    VALUE ary = Qnil;
     if(build_array)
   	ary = rb_ary_new();
     MYSQL_ROW row = mysql_fetch_row(res); // grab one off the top, to determine the rows
@@ -1288,6 +1290,8 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
    
     if(yield)
 	return obj;
+
+    return Qnil; // we should never get here
 }
 
 /*	fetch_hash2 (internal)	*/
