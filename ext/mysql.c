@@ -6,6 +6,7 @@
 
 #include <ruby.h>
 #include <errno.h>
+#include <stdarg.h> 
 #ifndef RSTRING_PTR
 #define RSTRING_PTR(str) RSTRING(str)->ptr
 #endif
@@ -234,6 +235,66 @@ static VALUE init(VALUE klass)
 #if MYSQL_VERSION_ID >= 32200
 int mysql_real_connect_nonblocking() {}
 
+typedef struct
+{
+ void *func_pointer;
+ int param_count;
+ void *args[10];
+ void *return_val;
+} arg_holder, *arg_holder2;
+
+
+static void call_single_function_rb_thread_blocking_region(void *arg_holder_in);
+
+void *rb_thread_blocking_region_variable_params(int number, ...)
+{
+  va_list param_pt; // TODO assert <= 10
+  va_start(param_pt, number);
+  int index;
+  arg_holder param_storer;
+  void *func_pointer = va_arg(param_pt, void *);
+  void *interrupter = va_arg(param_pt, void *);
+  param_storer.func_pointer = func_pointer;
+  int real_param_count = number - 2;
+  param_storer.param_count = real_param_count;
+  for(index = 0 ; index < real_param_count ; index++) 
+  {
+	void *arg = va_arg(param_pt, void *);
+	param_storer.args[index] = arg;
+
+  }
+  va_end(param_pt);
+
+  rb_thread_blocking_region(&call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
+
+  return param_storer.return_val;
+
+}
+
+static void call_single_function_rb_thread_blocking_region(void *arg_holder_in)
+{
+   arg_holder *params_and_func = (arg_holder *) arg_holder_in;
+   int param_count = params_and_func->param_count;
+   void *result;
+   if(param_count == 3)
+   {
+     void * (*pt2Func)(void *, void *, void *) = params_and_func->func_pointer;
+     result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2]); 
+   }else if(param_count == 6)
+   {
+	void * (*pt2Func)(void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
+	result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5]);
+   }else if(param_count == 8)
+   {
+	void * (*pt2Func)(void *, void *, void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
+	result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5], params_and_func->args[6], params_and_func->args[7]);
+   }else 
+	printf("UN nonwn %d\n", param_count);
+
+   params_and_func->return_val = result;
+}
+
+
 #endif
 
 /*	real_connect(host=nil, user=nil, passwd=nil, db=nil, port=nil, sock=nil, flag=nil)	*/
@@ -263,8 +324,10 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 
     obj = Data_Make_Struct(klass, struct mysql, 0, free_mysql, myp);
 #if MYSQL_VERSION_ID >= 32200
+	printf("conn5 -- \n");
     mysql_init(&myp->handler); /* we get here */
-    if (mysql_real_connect(&myp->handler, h, u, p, d, pp, s, f) == NULL)
+    int answer = rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f); 
+    if (answer == NULL)
 #elif MYSQL_VERSION_ID >= 32115
     if (mysql_real_connect(&myp->handler, h, u, p, pp, s, f) == NULL)
 #else
@@ -329,7 +392,6 @@ static VALUE client_version(VALUE obj)
 /*	real_connect(host=nil, user=nil, passwd=nil, db=nil, port=nil, sock=nil, flag=nil)	*/
 static VALUE real_connect2(int argc, VALUE* argv, VALUE obj)
 {
-	printf("conn2\n");
     VALUE host, user, passwd, db, port, sock, flag;
     char *h, *u, *p, *d, *s;
     unsigned int pp, f;
