@@ -232,14 +232,13 @@ static VALUE init(VALUE klass)
     return obj;
 }
 
-#if MYSQL_VERSION_ID >= 32200
+#ifdef HAVE_TBR
 
 typedef struct
 {
  void *func_pointer;
  int param_count;
  void *args[10];
- void *return_val;
 } arg_holder, *arg_holder2;
 
 
@@ -247,7 +246,7 @@ static void call_single_function_rb_thread_blocking_region(void *arg_holder_in);
 
 void *rb_thread_blocking_region_variable_params(int number, ...)
 {
-  va_list param_pt; // TODO assert <= 10
+  va_list param_pt; // TODO handle all the way through 10 args
   va_start(param_pt, number);
   int index;
   arg_holder param_storer;
@@ -264,9 +263,7 @@ void *rb_thread_blocking_region_variable_params(int number, ...)
   }
   va_end(param_pt);
 
-  rb_thread_blocking_region((rb_blocking_function_t *)call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
-
-  return param_storer.return_val;
+  return rb_thread_blocking_region((rb_blocking_function_t *)call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
 
 }
 
@@ -293,9 +290,8 @@ static void call_single_function_rb_thread_blocking_region(void *arg_holder_in)
         result = Qnil;
   }
 
-   params_and_func->return_val = result;
+   return result;
 }
-
 
 #endif
 
@@ -326,10 +322,13 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 
     obj = Data_Make_Struct(klass, struct mysql, 0, free_mysql, myp);
 #if MYSQL_VERSION_ID >= 32200
-	printf("conn5 -- \n");
+    printf("conn5 -- \n");
     mysql_init(&myp->handler); /* we get here */
-    VALUE answer = rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f); 
-    if (answer == NULL)
+#ifdef HAVE_TBR
+    if( (int) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
+#else
+    if(mysql_real_connect
+#endif
 #elif MYSQL_VERSION_ID >= 32115
     if (mysql_real_connect(&myp->handler, h, u, p, pp, s, f) == NULL)
 #else
