@@ -260,7 +260,6 @@ static void optimize_for_async( VALUE obj )
 
     vio_fastsend( m->handler.net.vio );
     async_in_progress_set( obj, Qfalse );
-    /*last_connection_identifier(obj);*/
 }
 
 static void schedule_connect(VALUE obj )
@@ -838,13 +837,6 @@ static VALUE readable( int argc, VALUE* argv, VALUE obj )
     return ( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ? Qtrue : Qfalse );
 }
 
-/* ready */
-static VALUE ready( VALUE obj )
-{
-    MYSQL* m = GetHandler(obj);
-    return ( m->status == MYSQL_STATUS_READY ) ? Qtrue : Qfalse;
-}
-
 /* retry */
 static VALUE retry( VALUE obj )
 {
@@ -924,11 +916,13 @@ static VALUE get_result(VALUE obj)
     }
 	if (mysql_read_query_result(m) != 0)
 	    mysql_raise(m);
+	
+	async_in_progress_set( obj, Qfalse );
+    
     if (GetMysqlStruct(obj)->query_with_result == Qfalse)
       	return obj;
     if (mysql_field_count(m) == 0)
-	    return Qnil;
-    async_in_progress_set( obj, Qfalse ); 
+	    return Qnil; 
     return store_result(obj);
 }
 
@@ -957,15 +951,17 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 
   rb_scan_args(argc, argv, "11", &sql, &timeout);
 
-  /*last_connection_identifier( obj );*/
-
   async_in_progress_set( obj, Qfalse );
 
   send_query(obj,sql);
 
-  schedule_query(obj, timeout);
-
-  return get_result(obj);
+  if (GetMysqlStruct(obj)->query_with_result == Qfalse){
+    async_in_progress_set( obj, Qfalse );
+    return obj;
+  } else {
+    schedule_query(obj, timeout);
+    return get_result(obj);
+  }
 }
 
 #if MYSQL_VERSION_ID >= 40100
@@ -2263,7 +2259,6 @@ void Init_mysql(void)
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "readable?", readable, -1);
     rb_define_method(cMysql, "retry?", retry, 0);
-    rb_define_method(cMysql, "ready?", ready, 0);
     rb_define_method(cMysql, "interrupted?", interrupted, 0);
     rb_define_method(cMysql, "blocking?", blocking, 0);
     rb_define_method(cMysql, "socket", socket, 0);
