@@ -861,23 +861,6 @@ static void validate_async_query( VALUE obj )
     }
 }
 
-/*
-static VALUE connection_dropped( VALUE obj )
-{
-    MYSQL* m = GetHandler(obj);
-    if( (mysql_errno(m) == CR_SERVER_LOST ) || ( mysql_errno(m) == CR_SERVER_GONE_ERROR ) || ( mysql_errno(m) == ER_SERVER_SHUTDOWN) ){
-      return Qtrue;
-    }else{
-      return Qfalse;
-    }
-}
-*/
-
-static void async_reconnect( VALUE obj )
-{
-	connect(obj);
-}
-
 static VALUE simulate_disconnect( VALUE obj )
 {
   MYSQL* m = GetHandler(obj);
@@ -900,7 +883,6 @@ static VALUE send_query(VALUE obj, VALUE sql)
 
     if (mysql_send_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql)) != 0){
       mysql_raise(m);
-	  /*( connection_dropped(obj) == Qtrue ) ? async_reconnect(obj) : mysql_raise(m);*/
 	}
 	
 	async_in_progress_set( obj, Qtrue );
@@ -911,13 +893,14 @@ static VALUE send_query(VALUE obj, VALUE sql)
 static VALUE get_result(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
+
+    async_in_progress_set( obj, Qfalse );
+
     if (GetMysqlStruct(obj)->connection == Qfalse) {
         rb_raise(eMysql, "query: not connected");
     }
 	if (mysql_read_query_result(m) != 0)
 	    mysql_raise(m);
-	
-	async_in_progress_set( obj, Qfalse );
     
     if (GetMysqlStruct(obj)->query_with_result == Qfalse)
       	return obj;
@@ -946,22 +929,23 @@ static void schedule_query(VALUE obj, VALUE timeout)
 /* async_query(sql,timeout=nil) */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
-  MYSQL* m = GetHandler(obj); 
-  VALUE sql, timeout;
+    MYSQL* m = GetHandler(obj); 
+    VALUE sql, timeout;
 
-  rb_scan_args(argc, argv, "11", &sql, &timeout);
+    rb_scan_args(argc, argv, "11", &sql, &timeout);
 
-  async_in_progress_set( obj, Qfalse );
-
-  send_query(obj,sql);
-
-  if (GetMysqlStruct(obj)->query_with_result == Qfalse){
     async_in_progress_set( obj, Qfalse );
-    return obj;
-  } else {
+
+    send_query(obj,sql);
+
     schedule_query(obj, timeout);
-    return get_result(obj);
-  }
+    
+    if (rb_block_given_p()) {
+      rb_yield( get_result(obj) );
+      return obj; 
+    }else{
+      return get_result(obj); 
+    }  
 }
 
 #if MYSQL_VERSION_ID >= 40100
