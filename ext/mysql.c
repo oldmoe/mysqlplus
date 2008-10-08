@@ -60,6 +60,7 @@ struct mysql {
     MYSQL handler;
     char connection;
     char query_with_result;
+    char gc_disabled;
     char blocking;
     int async_in_progress;
 };
@@ -181,7 +182,7 @@ static void mysql_raise(MYSQL* m)
     rb_exc_raise(e);
 }
 
-static VALUE mysqlres2obj(MYSQL_RES* res)
+static VALUE mysqlres2obj(MYSQL_RES* res, VALUE gc_disabled)
 {
     VALUE obj;
     struct mysql_res* resp;
@@ -191,8 +192,9 @@ static VALUE mysqlres2obj(MYSQL_RES* res)
     resp->res = res;
     resp->freed = Qfalse;
     rb_obj_call_init(obj, 0, NULL);
-    if (++store_result_count > GC_STORE_RESULT_LIMIT)
-	rb_gc();
+    if (++store_result_count > GC_STORE_RESULT_LIMIT && gc_disabled == Qfalse){
+      rb_gc();
+	}
     return obj;
 }
 
@@ -228,6 +230,7 @@ static VALUE init(VALUE klass)
     mysql_init(&myp->handler);
     myp->connection = Qfalse;
     myp->query_with_result = Qtrue;
+    myp->gc_disabled = Qfalse;
     rb_obj_call_init(obj, 0, NULL);
     return obj;
 }
@@ -646,7 +649,7 @@ static VALUE list_fields(int argc, VALUE* argv, VALUE obj)
     res = mysql_list_fields(m, StringValuePtr(table), NILorSTRING(field));
     if (res == NULL)
 	mysql_raise(m);
-    return mysqlres2obj(res);
+    return mysqlres2obj(res, GetMysqlStruct(obj)->gc_disabled);
 }
 
 /*	list_processes()	*/
@@ -656,7 +659,7 @@ static VALUE list_processes(VALUE obj)
     MYSQL_RES* res = mysql_list_processes(m);
     if (res == NULL)
 	mysql_raise(m);
-    return mysqlres2obj(res);
+    return mysqlres2obj(res, GetMysqlStruct(obj)->gc_disabled);
 }
 
 /*	list_tables(table=nil)	*/
@@ -750,7 +753,7 @@ static VALUE store_result(VALUE obj)
     MYSQL_RES* res = mysql_store_result(m);
     if (res == NULL)
 	mysql_raise(m);
-    return mysqlres2obj(res);
+    return mysqlres2obj(res, GetMysqlStruct(obj)->gc_disabled);
 }
 
 /*	thread_id()	*/
@@ -766,7 +769,7 @@ static VALUE use_result(VALUE obj)
     MYSQL_RES* res = mysql_use_result(m);
     if (res == NULL)
 	mysql_raise(m);
-    return mysqlres2obj(res);
+    return mysqlres2obj(res, GetMysqlStruct(obj)->gc_disabled);
 }
 
 static VALUE res_free(VALUE);
@@ -788,7 +791,7 @@ static VALUE query(VALUE obj, VALUE sql)
 		if (mysql_field_count(m) != 0)
 		    mysql_raise(m);
 	    } else {
-		VALUE robj = mysqlres2obj(res);
+		VALUE robj = mysqlres2obj(res, GetMysqlStruct(obj)->gc_disabled);
 		rb_ensure(rb_yield, robj, res_free, robj);
 	    }
 #if MYSQL_VERSION_ID >= 40101
@@ -857,6 +860,20 @@ static VALUE reconnected( VALUE obj ){
     int current_connection_id = mysql_thread_id( m );
     mysql_ping(m);
     return ( current_connection_id == mysql_thread_id( m ) ) ? Qfalse : Qtrue;
+}
+
+/* disable_gc(true|false) */
+static VALUE disable_gc_set(VALUE obj, VALUE flag)
+{
+    if (TYPE(flag) != T_TRUE && TYPE(flag) != T_FALSE)
+        rb_raise(rb_eTypeError, "invalid type, required true or false.");
+    GetMysqlStruct(obj)->gc_disabled = flag;
+    return flag;
+}
+
+/* gc_disabled */
+static VALUE gc_disabled( VALUE obj ){
+    return GetMysqlStruct(obj)->gc_disabled ? Qtrue: Qfalse;  
 }
 
 static void validate_async_query( VALUE obj )
@@ -1986,7 +2003,7 @@ static VALUE stmt_result_metadata(VALUE obj)
 	mysql_stmt_raise(s->stmt);
       return Qnil;
     }
-    return mysqlres2obj(res);
+    return mysqlres2obj(res, Qfalse);
 }
 
 /*	row_seek(offset)	*/
@@ -2254,6 +2271,8 @@ void Init_mysql(void)
     rb_define_method(cMysql, "retry?", retry, 0);
     rb_define_method(cMysql, "interrupted?", interrupted, 0);
     rb_define_method(cMysql, "blocking?", blocking, 0);
+    rb_define_method(cMysql, "gc_disabled?", gc_disabled, 0);
+    rb_define_method(cMysql, "disable_gc=", disable_gc_set, 1);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);
