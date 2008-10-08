@@ -851,6 +851,14 @@ static VALUE interrupted( VALUE obj )
     return ( vio_was_interrupted( m->net.vio ) == 1 ? Qtrue : Qfalse );
 }
 
+/* reconnected */
+static VALUE reconnected( VALUE obj ){
+    MYSQL* m = GetHandler(obj);
+    int current_connection_id = mysql_thread_id( m );
+    mysql_ping(m);
+    return ( current_connection_id == mysql_thread_id( m ) ) ? Qfalse : Qtrue;
+}
+
 static void validate_async_query( VALUE obj )
 {
   	MYSQL* m = GetHandler(obj);
@@ -2240,6 +2248,7 @@ void Init_mysql(void)
     rb_define_method(cMysql, "async_in_progress=", async_in_progress_set, 1);
     rb_define_method(cMysql, "send_query", send_query, 1);
     rb_define_method(cMysql, "simulate_disconnect", simulate_disconnect, 0);
+    rb_define_method(cMysql, "reconnected?", reconnected, 0);
     rb_define_method(cMysql, "get_result", get_result, 0);
     rb_define_method(cMysql, "readable?", readable, -1);
     rb_define_method(cMysql, "retry?", retry, 0);
