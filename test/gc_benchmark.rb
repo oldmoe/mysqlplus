@@ -13,7 +13,7 @@ def countable_gc?
 end
 
 def gc_counts( label, scope )
-  $gc_stats << "GC #{scope} ( #{label} ) #{GC.count}"
+  $gc_stats << "Objects #{scope} ( #{label} ) #{GC.count}"
 end
 
 def with_gc_counts( label )
@@ -24,7 +24,7 @@ end
 
 n = 1000
 
-Benchmark.bm do |x|
+Benchmark.bmbm do |x|
   x.report( 'With GC' ) do
     with_gc_counts( 'With GC' ) do
       n.times{ with_gc.c_async_query( 'SELECT * FROM user' ) }
