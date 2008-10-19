@@ -888,9 +888,32 @@ static void validate_async_query( VALUE obj )
 
 static VALUE simulate_disconnect( VALUE obj )
 {
-  MYSQL* m = GetHandler(obj);
-  mysql_library_end();
-  return Qnil;
+    MYSQL* m = GetHandler(obj);
+    mysql_library_end();
+    return Qnil;
+}
+
+static int begins_with_insensitive(char *candidate, char *check_for_in_upper_case)
+{
+    /* skip  opening whitespace --tab is 11, newline is 12, cr is 15, space 32 */
+    char *where_at = candidate;
+    while( ((*where_at >= 11 && *where_at <= 15) || (*where_at == 32)) && (where_at != 0)) 
+  	  where_at++;
+
+    char *where_at_in_test = check_for_in_upper_case;
+    while(*where_at_in_test)
+    {
+  	  int candidate_char = *where_at;
+	  if(candidate_char == 0)
+		  return 0; /* end of line */
+	  if(candidate_char >= 97 && candidate_char < 122) /* then it's upper case --lower case ify it */
+		  candidate_char -= 32;
+          if(candidate_char != *where_at_in_test)
+		  return 0;
+	  where_at_in_test++;
+	  where_at++;
+	}
+    return 1;
 }
 
 /* send_query(sql) */
@@ -910,7 +933,22 @@ static VALUE send_query(VALUE obj, VALUE sql)
       mysql_raise(m);
 	}
 	
-	async_in_progress_set( obj, Qtrue );
+	/* what about http://dev.mysql.com/doc/refman/5.0/en/implicit-commit.html and more? */
+	if( 
+	  begins_with_insensitive(RSTRING_PTR(sql), "SET ") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "BEGIN") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "START TRANSACTION") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "ROLLBACK") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "LOCK ") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "UNLOCK ") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "USE ") ||
+	  begins_with_insensitive(RSTRING_PTR(sql), "COMMIT") )
+	  {
+		/* do not mark an async in progress --they used send_query for something that doesn't necessarily have a result--is this allowable? */
+	   async_in_progress_set( obj, Qfalse ); 
+	} else {
+	  async_in_progress_set( obj, Qtrue );
+	}
 	return Qnil;
 }
 

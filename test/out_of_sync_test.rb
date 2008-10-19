@@ -24,3 +24,8 @@ m.close
 m.connect('localhost','root')
 m.safe_query( 'select sleep(1)' )
 m.safe_query( 'select sleep(1)' )#raises
+m.simulate_disconnect
+m.safe_query( 'BEGIN' )
+m.safe_query( 'select sleep(1)' )
+m.get_result()
+m.safe_query( 'COMMIT' )
