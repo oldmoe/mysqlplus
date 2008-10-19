@@ -938,16 +938,28 @@ static void schedule_query(VALUE obj, VALUE timeout)
 {
     MYSQL* m = GetHandler(obj);
     fd_set read;
-
+    int ret;
+ 
     timeout = ( NIL_P(timeout) ? m->net.read_timeout : INT2NUM(timeout) );
 
     struct timeval tv = { tv_sec: timeout, tv_usec: 0 };
 
-    FD_ZERO(&read);
-    FD_SET(m->net.fd, &read);
+    for(;;){
+      FD_ZERO(&read);
+      FD_SET(m->net.fd, &read);
+ 
+      ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
+      if (ret < 0) {
+        rb_raise(eMysql, "query: timeout");
+      }
+	  
+	  if (ret == 0) {
+        continue;
+      }
 
-    if (rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv) < 0) {
-      rb_raise(eMysql, "query: timeout");
+      if (m->status == MYSQL_STATUS_READY){
+        break;
+      }       
     }
 }
 
