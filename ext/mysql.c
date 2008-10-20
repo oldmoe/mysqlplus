@@ -63,6 +63,7 @@ struct mysql {
     char gc_disabled;
     char blocking;
     int async_in_progress;
+    char busy;
 };
 
 struct mysql_res {
@@ -821,7 +822,33 @@ static VALUE socket(VALUE obj)
 
 /* blocking */
 static VALUE blocking(VALUE obj){
-  return ( GetMysqlStruct(obj)->blocking ? Qtrue : Qfalse );
+    return ( GetMysqlStruct(obj)->blocking ? Qtrue : Qfalse );
+}
+
+/* is_busy */
+static VALUE is_busy(VALUE obj){
+    return ( GetMysqlStruct(obj)->busy ? Qtrue : Qfalse );
+}
+
+static VALUE is_idle(VALUE obj){
+    return ( is_busy(obj) == Qtrue ) ? Qfalse : Qtrue;
+}
+
+/* busy(true|false) */
+static VALUE busy_set(VALUE obj, VALUE flag)
+{
+    if (TYPE(flag) != T_TRUE && TYPE(flag) != T_FALSE)
+        rb_raise(rb_eTypeError, "invalid type, required true or false.");
+    GetMysqlStruct(obj)->busy = flag;
+    return flag;
+}
+
+static void busy( VALUE obj ){
+    busy_set( obj, Qtrue );
+}
+
+static void idle( VALUE obj ){
+    busy_set( obj, Qfalse );
 }
 
 /* readable(timeout=nil) */
@@ -924,12 +951,14 @@ static VALUE send_query(VALUE obj, VALUE sql)
     Check_Type(sql, T_STRING);
 
     if (GetMysqlStruct(obj)->connection == Qfalse && async_in_progress(obj) == Qtrue ) {
+      idle( obj );
       rb_raise(eMysql, "query: not connected");
     }
 
     validate_async_query(obj);
 
     if (mysql_send_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql)) != 0){
+      idle( obj );
       mysql_raise(m);
 	}
 	
@@ -960,10 +989,13 @@ static VALUE get_result(VALUE obj)
     async_in_progress_set( obj, Qfalse );
 
     if (GetMysqlStruct(obj)->connection == Qfalse) {
-        rb_raise(eMysql, "query: not connected");
+       idle( obj );    
+       rb_raise(eMysql, "query: not connected");
     }
-	if (mysql_read_query_result(m) != 0)
-	    mysql_raise(m);
+	if (mysql_read_query_result(m) != 0){
+	   idle( obj );    
+ 	   mysql_raise(m);
+	}
     
     if (GetMysqlStruct(obj)->query_with_result == Qfalse)
       	return obj;
@@ -988,6 +1020,7 @@ static void schedule_query(VALUE obj, VALUE timeout)
  
       ret = rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv);
       if (ret < 0) {
+        idle( obj );    
         rb_raise(eMysql, "query: timeout");
       }
 	  
@@ -1011,14 +1044,18 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 
     async_in_progress_set( obj, Qfalse );
 
+    busy(obj); 
+
     send_query(obj,sql);
 
     schedule_query(obj, timeout);
     
     if (rb_block_given_p()) {
       rb_yield( get_result(obj) );
+      idle( obj );
       return obj; 
     }else{
+      idle( obj );
       return get_result(obj); 
     }  
 }
@@ -2323,6 +2360,9 @@ void Init_mysql(void)
     rb_define_method(cMysql, "blocking?", blocking, 0);
     rb_define_method(cMysql, "gc_disabled?", gc_disabled, 0);
     rb_define_method(cMysql, "disable_gc=", disable_gc_set, 1);
+    rb_define_method(cMysql, "busy?", is_busy, 0);
+    rb_define_method(cMysql, "idle?", is_idle, 0);
+    rb_define_method(cMysql, "busy=", busy_set, 1);
     rb_define_method(cMysql, "socket", socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);
