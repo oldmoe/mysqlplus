@@ -913,11 +913,10 @@ static void validate_async_query( VALUE obj )
     }
 }
 
-static VALUE simulate_disconnect( VALUE obj )
+static void simulate_disconnect( VALUE obj )
 {
     MYSQL* m = GetHandler(obj);
     mysql_library_end();
-    return Qnil;
 }
 
 static int begins_with_insensitive(char *candidate, char *check_for_in_upper_case)
@@ -947,7 +946,7 @@ static int begins_with_insensitive(char *candidate, char *check_for_in_upper_cas
 static VALUE send_query(VALUE obj, VALUE sql)
 {
     MYSQL* m = GetHandler(obj);
-        
+   
     Check_Type(sql, T_STRING);
 
     if (GetMysqlStruct(obj)->connection == Qfalse && async_in_progress(obj) == Qtrue ) {
@@ -978,6 +977,7 @@ static VALUE send_query(VALUE obj, VALUE sql)
 	} else {
 	  async_in_progress_set( obj, Qtrue );
 	}
+	
 	return Qnil;
 }
 
@@ -1001,7 +1001,7 @@ static VALUE get_result(VALUE obj)
       	return obj;
     if (mysql_field_count(m) == 0)
 	    return Qnil; 
-    return store_result(obj);
+      return store_result(obj);
 }
 
 static void schedule_query(VALUE obj, VALUE timeout)
@@ -1034,6 +1034,10 @@ static void schedule_query(VALUE obj, VALUE timeout)
     }
 }
 
+static int should_schedule_query(){
+  return ( ( rb_thread_main() == rb_thread_current() ) && rb_thread_alone() );
+}
+
 /* async_query(sql,timeout=nil) */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
@@ -1046,10 +1050,12 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 
     busy(obj); 
 
-    send_query(obj,sql);
+    send_query( obj, sql );
 
-    schedule_query(obj, timeout);
-    
+    if ( should_schedule_query() != 1 ){
+      schedule_query(obj, timeout);
+    } 
+
     if (rb_block_given_p()) {
       rb_yield( get_result(obj) );
       idle( obj );
