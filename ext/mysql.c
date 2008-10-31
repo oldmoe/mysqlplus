@@ -327,7 +327,7 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 #ifdef HAVE_TBR
     if( (int) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
 #else
-    if(mysql_real_connect
+    if(mysql_real_connect(&myp->handler, h, u, p, d, pp, s, f) == NULL)
 #endif
 #elif MYSQL_VERSION_ID >= 32115
     if (mysql_real_connect(&myp->handler, h, u, p, pp, s, f) == NULL)
@@ -862,8 +862,13 @@ static VALUE socket(VALUE obj)
 static VALUE socket_type(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
+    char *answer;
     VALUE description = vio_description( m->net.vio );
-    return NILorSTRING( description );
+    answer =  NILorSTRING( description );
+    if(answer)
+	return Qtrue; // TODO return a ruby string
+    else
+	return Qnil;
 }
 
 /* blocking */
