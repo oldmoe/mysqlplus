@@ -1035,7 +1035,7 @@ static void schedule_query(VALUE obj, VALUE timeout)
 }
 
 static int should_schedule_query(){
-  return ( ( rb_thread_main() == rb_thread_current() ) && rb_thread_alone() ) != 1;
+    return rb_thread_alone() != 1;
 }
 
 /* async_query(sql,timeout=nil) */
