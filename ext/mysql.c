@@ -1580,12 +1580,12 @@ static VALUE stmt_execute(int argc, VALUE *argv, VALUE obj)
                     s->param.bind[i].buffer = &(s->param.buffer[i]);
                     t.second_part = 0;
                     t.neg = 0;
-                    t.second = FIX2INT(RARRAY(a)->ptr[0]);
-                    t.minute = FIX2INT(RARRAY(a)->ptr[1]);
-                    t.hour = FIX2INT(RARRAY(a)->ptr[2]);
-                    t.day = FIX2INT(RARRAY(a)->ptr[3]);
-                    t.month = FIX2INT(RARRAY(a)->ptr[4]);
-                    t.year = FIX2INT(RARRAY(a)->ptr[5]);
+                    t.second = FIX2INT(rb_ary_entry(a, 0));
+                    t.minute = FIX2INT(rb_ary_entry(a, 1));
+                    t.hour = FIX2INT(rb_ary_entry(a, 2));
+                    t.day = FIX2INT(rb_ary_entry(a, 3));
+                    t.month = FIX2INT(rb_ary_entry(a, 4));
+                    t.year = FIX2INT(rb_ary_entry(a, 5));
                     *(MYSQL_TIME*)&(s->param.buffer[i]) = t;
                 } else if (CLASS_OF(argv[i]) == cMysqlTime) {
                     MYSQL_TIME t;
