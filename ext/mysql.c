@@ -719,18 +719,43 @@ static VALUE use_result(VALUE obj)
 }
 
 static VALUE res_free(VALUE);
+
+typedef struct {
+	MYSQL *m;
+	const char *data;
+	unsigned long len;
+} QueryArgs;
+
+static VALUE blocking_query(void *data)
+{
+    QueryArgs *args = (QueryArgs *) data;
+    return (VALUE) mysql_real_query(args->m, args->data, args->len);
+}
+
 /*	query(sql)	*/
 static VALUE query(VALUE obj, VALUE sql)
 {
     int loop = 0;
     MYSQL* m = GetHandler(obj);
+    QueryArgs args;
+    int result;
+    
     Check_Type(sql, T_STRING);
     if (GetMysqlStruct(obj)->connection == Qfalse) {
         rb_raise(eMysql, "query: not connected");
     }
     if (rb_block_given_p()) {
-	if (mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql)) != 0)
+        #ifdef RUBY_VM
+	    args.m = m;
+	    args.data = RSTRING_PTR(sql);
+	    args.len = RSTRING_LEN(sql);
+	    result = (int) rb_thread_blocking_region(blocking_query, &args, RUBY_UBF_PROCESS, 0);
+	#else
+	    result = mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql));
+	#endif
+	if (result != 0)
 	    mysql_raise(m);
+	
 	do {
 	    MYSQL_RES* res = mysql_store_result(m);
 	    if (res == NULL) {
@@ -749,7 +774,16 @@ static VALUE query(VALUE obj, VALUE sql)
 #endif
 	return obj;
     }
-    if (mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql)) != 0)
+    
+    #ifdef RUBY_VM
+	args.m = m;
+	args.data = RSTRING_PTR(sql);
+	args.len = RSTRING_LEN(sql);
+	result = (int) rb_thread_blocking_region(blocking_query, &args, RUBY_UBF_PROCESS, 0);
+    #else
+	result = mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql));
+    #endif
+    if (result != 0)
 	mysql_raise(m);
     if (GetMysqlStruct(obj)->query_with_result == Qfalse)
 	return obj;
