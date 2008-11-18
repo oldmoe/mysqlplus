@@ -803,7 +803,7 @@ static VALUE socket_type(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
     VALUE description = vio_description( m->net.vio );
-    return NILorSTRING( description );
+    return (VALUE) NILorSTRING( description );
 }
 
 /* blocking */
@@ -857,7 +857,7 @@ static VALUE get_result(VALUE obj)
     return store_result(obj);
 }
 
-static VALUE schedule(VALUE obj, VALUE timeout)
+static void schedule(VALUE obj, VALUE timeout)
 {
     MYSQL* m = GetHandler(obj);
     fd_set read;
@@ -872,13 +872,11 @@ static VALUE schedule(VALUE obj, VALUE timeout)
     if (rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv) < 0) {
       rb_raise(eMysql, "query: timeout");
     }
-
 }
 
 /* async_query(sql,timeout=nil) */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
-  MYSQL* m = GetHandler(obj); 
   VALUE sql, timeout;
 
   rb_scan_args(argc, argv, "11", &sql, &timeout);
