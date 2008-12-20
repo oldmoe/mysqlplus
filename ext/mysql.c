@@ -813,18 +813,43 @@ static VALUE use_result(VALUE obj)
 }
 
 static VALUE res_free(VALUE);
+
+typedef struct {
+	MYSQL *m;
+	const char *data;
+	unsigned long len;
+} QueryArgs;
+
+static VALUE blocking_query(void *data)
+{
+    QueryArgs *args = (QueryArgs *) data;
+    return (VALUE) mysql_real_query(args->m, args->data, args->len);
+}
+
 /*	query(sql)	*/
 static VALUE query(VALUE obj, VALUE sql)
 {
     int loop = 0;
     MYSQL* m = GetHandler(obj);
+    QueryArgs args;
+    int result;
+    
     Check_Type(sql, T_STRING);
     if (GetMysqlStruct(obj)->connection == Qfalse) {
         rb_raise(eMysql, "query: not connected");
     }
     if (rb_block_given_p()) {
-	if (mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql)) != 0)
+        #ifdef RUBY_VM
+	    args.m = m;
+	    args.data = RSTRING_PTR(sql);
+	    args.len = RSTRING_LEN(sql);
+	    result = (int) rb_thread_blocking_region(blocking_query, &args, RUBY_UBF_PROCESS, 0);
+	#else
+	    result = mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql));
+	#endif
+	if (result != 0)
 	    mysql_raise(m);
+	
 	do {
 	    MYSQL_RES* res = mysql_store_result(m);
 	    if (res == NULL) {
@@ -843,7 +868,16 @@ static VALUE query(VALUE obj, VALUE sql)
 #endif
 	return obj;
     }
-    if (mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql)) != 0)
+    
+    #ifdef RUBY_VM
+	args.m = m;
+	args.data = RSTRING_PTR(sql);
+	args.len = RSTRING_LEN(sql);
+	result = (int) rb_thread_blocking_region(blocking_query, &args, RUBY_UBF_PROCESS, 0);
+    #else
+	result = mysql_real_query(m, RSTRING_PTR(sql), RSTRING_LEN(sql));
+    #endif
+    if (result != 0)
 	mysql_raise(m);
     if (GetMysqlStruct(obj)->query_with_result == Qfalse)
 	return obj;
@@ -858,7 +892,7 @@ static VALUE socket(VALUE obj)
     MYSQL* m = GetHandler(obj);
     return INT2NUM(m->net.fd);
 }
-/* socket_type */
+/* socket_type --currently returns true or false, needs some work */
 static VALUE socket_type(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
@@ -922,7 +956,7 @@ static VALUE get_result(VALUE obj)
     return store_result(obj);
 }
 
-static VALUE schedule(VALUE obj, VALUE timeout)
+static void schedule(VALUE obj, VALUE timeout)
 {
     MYSQL* m = GetHandler(obj);
     fd_set read;
@@ -937,13 +971,11 @@ static VALUE schedule(VALUE obj, VALUE timeout)
     if (rb_thread_select(m->net.fd + 1, &read, NULL, NULL, &tv) < 0) {
       rb_raise(eMysql, "query: timeout");
     }
-
 }
 
 /* async_query(sql,timeout=nil) */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
-  MYSQL* m = GetHandler(obj); 
   VALUE sql, timeout;
 
   rb_scan_args(argc, argv, "11", &sql, &timeout);
@@ -1295,7 +1327,7 @@ static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, in
     if(yield)
 	return obj;
 
-    return Qnil; // we should never get here
+    return Qnil; /* we should never get here -- this takes out a compiler warning */
 }
 
 /*	fetch_hash2 (internal)	*/
@@ -1679,12 +1711,12 @@ static VALUE stmt_execute(int argc, VALUE *argv, VALUE obj)
                     s->param.bind[i].buffer = &(s->param.buffer[i]);
                     t.second_part = 0;
                     t.neg = 0;
-                    t.second = FIX2INT(RARRAY(a)->ptr[0]);
-                    t.minute = FIX2INT(RARRAY(a)->ptr[1]);
-                    t.hour = FIX2INT(RARRAY(a)->ptr[2]);
-                    t.day = FIX2INT(RARRAY(a)->ptr[3]);
-                    t.month = FIX2INT(RARRAY(a)->ptr[4]);
-                    t.year = FIX2INT(RARRAY(a)->ptr[5]);
+                    t.second = FIX2INT(rb_ary_entry(a, 0));
+                    t.minute = FIX2INT(rb_ary_entry(a, 1));
+                    t.hour = FIX2INT(rb_ary_entry(a, 2));
+                    t.day = FIX2INT(rb_ary_entry(a, 3));
+                    t.month = FIX2INT(rb_ary_entry(a, 4));
+                    t.year = FIX2INT(rb_ary_entry(a, 5));
                     *(MYSQL_TIME*)&(s->param.buffer[i]) = t;
                 } else if (CLASS_OF(argv[i]) == cMysqlTime) {
                     MYSQL_TIME t;
