@@ -322,13 +322,12 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 
     obj = Data_Make_Struct(klass, struct mysql, 0, free_mysql, myp);
 #if MYSQL_VERSION_ID >= 32200
-    printf("conn5 -- \n");
     mysql_init(&myp->handler); /* we get here */
-#ifdef HAVE_TBR
+# ifdef HAVE_TBR
     if( (int) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
-#else
+# else
     if(mysql_real_connect(&myp->handler, h, u, p, d, pp, s, f) == NULL)
-#endif
+# endif
 #elif MYSQL_VERSION_ID >= 32115
     if (mysql_real_connect(&myp->handler, h, u, p, pp, s, f) == NULL)
 #else

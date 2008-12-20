@@ -5,7 +5,7 @@
 # from .82s to .62s
 # you can experiment with it by changing the query here to be a long one, and toggling the do_the_use_query_optimization variable
 # this also has the interesting property of 'freeing' Ruby to do thread changes mid-query.
-
+require 'rubygems'
 require 'mysqlplus'
 
 do_the_use_query_optimization = true
