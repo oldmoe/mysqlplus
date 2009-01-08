@@ -190,8 +190,10 @@ static VALUE mysqlres2obj(MYSQL_RES* res)
     resp->res = res;
     resp->freed = Qfalse;
     rb_obj_call_init(obj, 0, NULL);
+    /* disabled until it can be reviewed further--rely on the normal GC for now.
     if (++store_result_count > GC_STORE_RESULT_LIMIT)
 	rb_gc();
+    */
     return obj;
 }
 
