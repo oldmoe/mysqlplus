@@ -8,4 +8,6 @@ Merge in lourens' branch -- I like the double check for not using send_query twi
 
 look into http://coderrr.wordpress.com/2009/01/11/ruby-and-mysqlplus-select-deadlock/
 
+Some of the test/* anticipate a certain database existing--todo create it first, then drop it [?]
+
 critical todo list:
