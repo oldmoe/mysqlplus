@@ -1,0 +1,7 @@
+TODO list:
+
+Is there a quick, cheap, easy way to test for writability so we don't have to use select on the way in? Does it take long anyway?
+
+Docs for how to use with rails, etc. [there is mysqlplus_adapter, so maybe we're good there].
+
+Merge in lourens' branch -- I like the double check for not using send_query twice in a row! [rdp]
