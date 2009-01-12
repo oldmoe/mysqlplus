@@ -6,5 +6,6 @@ Docs for how to use with rails, etc. [there is mysqlplus_adapter, so maybe we're
 
 Merge in lourens' branch -- I like the double check for not using send_query twice in a row! [rdp]
 
+look into http://coderrr.wordpress.com/2009/01/11/ruby-and-mysqlplus-select-deadlock/
 
 critical todo list:
