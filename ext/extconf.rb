@@ -1,11 +1,23 @@
 require 'mkmf'
 
+dirs = ENV['PATH'].split(':') + %w[
+  /opt
+  /opt/local
+  /opt/local/mysql
+  /opt/local/lib/mysql5
+  /usr
+  /usr/local
+  /usr/local/mysql
+  /usr/local/lib/mysql5
+]
+
+GLOB = "{#{dirs.join(',')}}/{mysql_config,mysql_config5}"
 
 if /mswin32/ =~ RUBY_PLATFORM
   inc, lib = dir_config('mysql')
   exit 1 unless have_library("libmysql")
-elsif mc = with_config('mysql-config') then
-  mc = 'mysql_config' if mc == true
+elsif mc = (with_config('mysql-config') || Dir[GLOB].first) then
+  mc = Dir[GLOB].first if mc == true
   cflags = `#{mc} --cflags`.chomp
   exit 1 if $? != 0
   libs = `#{mc} --libs`.chomp
