@@ -8,8 +8,9 @@ dirs = ENV['PATH'].split(':') + %w[
   /usr
   /usr/local
   /usr/local/mysql
+  /usr/local/mysql-*
   /usr/local/lib/mysql5
-]
+].map{|dir| "#{dir}/bin" }
 
 GLOB = "{#{dirs.join(',')}}/{mysql_config,mysql_config5}"
 
