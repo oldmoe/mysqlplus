@@ -20,6 +20,14 @@ An enhanced MySQL database driver. With support for async operations and threade
       --with-mysql-dir=/usr/local/mysql \
       --with-mysql-lib=/usr/local/mysql/lib \
       --with-mysql-include=/usr/local/mysql/include
+== Using
+  to use within rails
+  add require 'mysqlplus' to the top of environment.rb
+  this instantiates the Mysql class that you can use.
+  and it will automagically use async_query instead of query, so it's a drop in replacement.
+
+  Same with other scripts that want to use it--just require 'mysqlplus' BEFORE you require 'mysql' and it will 
+  load the asynchronous version, then ignore the sequent require 'mysql' call.
 
 === Credits
 
