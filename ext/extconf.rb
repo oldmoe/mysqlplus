@@ -45,8 +45,10 @@ else
   exit 1
 end
 
+# check for 1.9
 if have_func('rb_thread_blocking_region') and have_macro('RUBY_UBF_IO', 'ruby.h')
-  $CPPFLAGS << " -DHAVE_TBR"
+  $CFLAGS += " -DHAVE_TBR "
+  $CPPFLAGS << " -DHAVE_TBR "
 end
 
 # make mysql constant
