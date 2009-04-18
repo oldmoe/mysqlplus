@@ -248,6 +248,11 @@ typedef struct
 } arg_holder, *arg_holder2;
 
 
+// here's the call to make  rb_thread_blocking_region much cleaner and easier
+// syntax: param_count+2, func_pointer to call, [RUBY_UBF_IO or RUBY_UBF_PROCESS], param1, param2...
+//  the third parameter is the interuptor--possible values appear to be RUBY_UBF_IO or RUBY_UBF_PROCESS http://groups.google.com/group/comp.lang.ruby/browse_thread/thread/ad8c1326b2a8e404/00447b9aa15979be?lnk=raot
+// ex: (int) returned_this = rb_thread_blocking_region_variable_params(10, &method_name, RUBY_UBF_IO, param1, param2, param3, param4, param5, param6, param7, param8)
+
 static void call_single_function_rb_thread_blocking_region(void *arg_holder_in);
 
 void *rb_thread_blocking_region_variable_params(int number, ...)

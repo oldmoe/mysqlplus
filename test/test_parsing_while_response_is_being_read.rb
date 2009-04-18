@@ -5,7 +5,7 @@
 # from .82s to .62s
 # you can experiment with it by changing the query here to be a long one, and toggling the do_the_use_query_optimization variable
 # this also has the interesting property of 'freeing' Ruby to do thread changes mid-query.
-require 'mysqlplus'
+require 'create_test_db'
 
 do_the_use_query_optimization = true
 
@@ -15,7 +15,7 @@ $start = Time.now
 
 $connections = []
 $count.times do  
-  $connections << Mysql.real_connect('localhost','root', '', 'local_leadgen_dev')
+  $connections << Mysql.real_connect('localhost','root', '', 'local_test_db')
 end
 
 puts 'connection pool ready'
@@ -27,7 +27,7 @@ $count.times do |i|
     puts "sending query on connection #{i}"
     conn = $connections[i]
     saved = []
-    query = "select * from campus_zips"
+    query = "select * from test_table"
     if do_the_use_query_optimization
       conn.query_with_result=false
       result = conn.async_query(query)
