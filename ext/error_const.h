@@ -533,4 +533,7 @@
     rb_define_mysql_const(ER_ADMIN_WRONG_MRG_TABLE);
     rb_define_mysql_const(ER_TOO_HIGH_LEVEL_OF_NESTING_FOR_SELECT);
     rb_define_mysql_const(ER_NAME_BECOMES_EMPTY);
+    rb_define_mysql_const(ER_AMBIGUOUS_FIELD_TERM);
+    rb_define_mysql_const(ER_LOAD_DATA_INVALID_COLUMN);
+    rb_define_mysql_const(ER_LOG_PURGE_NO_FILE);
     rb_define_mysql_const(ER_ERROR_LAST);

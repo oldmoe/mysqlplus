@@ -194,16 +194,10 @@ static VALUE mysqlres2obj(MYSQL_RES* res, VALUE gc_disabled)
     resp->res = res;
     resp->freed = Qfalse;
     rb_obj_call_init(obj, 0, NULL);
-<<<<<<< HEAD:ext/mysql.c
     /* disabled until it can be reviewed further--rely on the normal GC for now.
     if (++store_result_count > GC_STORE_RESULT_LIMIT)
 	rb_gc();
     */
-=======
-    if (++store_result_count > GC_STORE_RESULT_LIMIT && gc_disabled == Qfalse){
-      rb_gc();
-	}
->>>>>>> with_async_validation:ext/mysql.c
     return obj;
 }
 
@@ -244,7 +238,6 @@ static VALUE init(VALUE klass)
     return obj;
 }
 
-<<<<<<< HEAD:ext/mysql.c
 #ifdef HAVE_TBR
 
 typedef struct
@@ -308,7 +301,6 @@ static void call_single_function_rb_thread_blocking_region(void *arg_holder_in)
 
 #endif
 
-=======
 static VALUE connection_identifier( VALUE obj )
 {
     MYSQL* m = GetHandler(obj);
@@ -328,6 +320,7 @@ static VALUE async_in_progress_set( VALUE obj, VALUE flag )
     return flag; 
 }
 
+// does this actually really do anything helpful? Not sure.
 static void optimize_for_async( VALUE obj )
 {
     struct mysql* m = GetMysqlStruct(obj);
@@ -339,16 +332,19 @@ static void optimize_for_async( VALUE obj )
     async_in_progress_set( obj, Qfalse );
 }
 
+// TODO what should this do?
 static void schedule_connect(VALUE obj )
 {
     MYSQL* m = GetHandler(obj);
     fd_set read;
 
     struct timeval tv = { tv_sec: m->options.connect_timeout, tv_usec: 0 };
-
+/* TODO is this old?
     if (rb_thread_select(0, NULL, NULL, NULL, &tv) < 0) {
       rb_raise(eMysql, "connect: timeout");
     }
+*/
+
 /*
     FD_ZERO(&read);
     FD_SET(m->net.fd, &read);
@@ -359,7 +355,6 @@ static void schedule_connect(VALUE obj )
 */
 }
 
->>>>>>> with_async_validation:ext/mysql.c
 /*	real_connect(host=nil, user=nil, passwd=nil, db=nil, port=nil, sock=nil, flag=nil)	*/
 static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets run */
 {
@@ -856,12 +851,8 @@ static VALUE store_result(VALUE obj)
  
     if (res == NULL)
 	mysql_raise(m);
-<<<<<<< HEAD:ext/mysql.c
 
-    return mysqlres2obj(res);
-=======
     return mysqlres2obj(res, GetMysqlStruct(obj)->gc_disabled);
->>>>>>> with_async_validation:ext/mysql.c
 }
 
 /*	thread_id()	*/
@@ -960,7 +951,6 @@ static VALUE socket(VALUE obj)
     MYSQL* m = GetHandler(obj);
     return INT2NUM(m->net.fd);
 }
-<<<<<<< HEAD:ext/mysql.c
 /* socket_type --currently returns true or false, needs some work */
 static VALUE socket_type(VALUE obj)
 {
@@ -973,8 +963,6 @@ static VALUE socket_type(VALUE obj)
     else
 	return Qnil;
 }
-=======
->>>>>>> with_async_validation:ext/mysql.c
 
 /* blocking */
 static VALUE blocking(VALUE obj){
@@ -1069,10 +1057,11 @@ static void validate_async_query( VALUE obj )
     }
 }
 
-static void simulate_disconnect( VALUE obj )
+static VALUE simulate_disconnect( VALUE obj )
 {
     MYSQL* m = GetHandler(obj);
     mysql_library_end();
+    return Qnil;
 }
 
 static int begins_with_insensitive(char *candidate, char *check_for_in_upper_case)
@@ -1160,11 +1149,7 @@ static VALUE get_result(VALUE obj)
       return store_result(obj);
 }
 
-<<<<<<< HEAD:ext/mysql.c
-static void schedule(VALUE obj, VALUE timeout)
-=======
 static void schedule_query(VALUE obj, VALUE timeout)
->>>>>>> with_async_validation:ext/mysql.c
 {
     MYSQL* m = GetHandler(obj);
     fd_set read;
@@ -1192,24 +1177,17 @@ static void schedule_query(VALUE obj, VALUE timeout)
         break;
       }       
     }
-<<<<<<< HEAD:ext/mysql.c
-=======
 }
 
 static int should_schedule_query(){
     return rb_thread_alone() != 1;
->>>>>>> with_async_validation:ext/mysql.c
 }
 
 /* async_query(sql,timeout=nil) */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
-<<<<<<< HEAD:ext/mysql.c
-  VALUE sql, timeout;
-=======
     MYSQL* m = GetHandler(obj); 
     VALUE sql, timeout;
->>>>>>> with_async_validation:ext/mysql.c
 
     rb_scan_args(argc, argv, "11", &sql, &timeout);
 
