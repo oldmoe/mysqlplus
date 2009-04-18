@@ -1,4 +1,3 @@
-require 'rubygems'
 require 'mysqlplus'
 begin
   Mysql.real_connect('fakehost','root', '', 'local_leadgen_dev')

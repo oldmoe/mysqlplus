@@ -1,7 +1,7 @@
+require 'mysqlplus'
 require 'rubygems'
 require 'sequel'
 
-require 'mysqlplus'
 class Mysql
   unless method_defined? :sync_query
     alias :sync_query :query

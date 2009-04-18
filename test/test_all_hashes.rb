@@ -3,7 +3,6 @@
 # note that we load all the rows first, then run .all_hashes on the result [to see more easily the effect of all hashes]
 # on my machine and a 200_000 row table, it took 3.38s versus 3.65s for the old .each_hash way [note also that .each_hash is 
 # almost as fast, now, as .all_hashes--they've both been optimized]
-require 'rubygems'
 require 'mysqlplus'
 
 use_the_all_hashes_method = true 
