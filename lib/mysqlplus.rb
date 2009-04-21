@@ -15,7 +15,7 @@ class Mysql
   begin
     alias_method :async_query, :c_async_query  
   rescue NameError => e
-    raise LoadError.new("error loading mysqlplus--this may mean you ran a require 'mysql' before a require 'mysqplus', which must come first")
+    raise LoadError.new("error loading mysqlplus--this may mean you ran a require 'mysql' before a require 'mysqplus', which must come first -- possibly also run gem uninstall mysql")
   end
   
 end
