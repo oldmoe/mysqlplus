@@ -67,6 +67,7 @@ struct mysql {
     char busy;
 };
 
+// a wrapper for mysql_res's so we can detect double frees
 struct mysql_res {
     MYSQL_RES* res;
     char freed;
@@ -233,11 +234,12 @@ static VALUE init(VALUE klass)
     mysql_init(&myp->handler);
     myp->connection = Qfalse;
     myp->query_with_result = Qtrue;
-    myp->gc_disabled = Qfalse;
+    myp->gc_disabled = Qtrue;
     rb_obj_call_init(obj, 0, NULL);
     return obj;
 }
 
+// =========== a 1.9 rb_thread_blocking_region simplifier attempt
 #ifdef HAVE_TBR
 
 typedef struct
@@ -247,17 +249,16 @@ typedef struct
  void *args[10];
 } arg_holder, *arg_holder2;
 
-
-// here's the call to make  rb_thread_blocking_region much cleaner and easier
+// here's how to make  rb_thread_blocking_region much cleaner and easier
 // syntax: param_count+2, func_pointer to call, [RUBY_UBF_IO or RUBY_UBF_PROCESS], param1, param2...
-//  the third parameter is the interuptor--possible values appear to be RUBY_UBF_IO or RUBY_UBF_PROCESS http://groups.google.com/group/comp.lang.ruby/browse_thread/thread/ad8c1326b2a8e404/00447b9aa15979be?lnk=raot
+// the third parameter is the interuptor--possible values appear to be RUBY_UBF_IO or RUBY_UBF_PROCESS http://groups.google.com/group/comp.lang.ruby/browse_thread/thread/ad8c1326b2a8e404/00447b9aa15979be?lnk=raot
 // ex: (int) returned_this = rb_thread_blocking_region_variable_params(10, &method_name, RUBY_UBF_IO, param1, param2, param3, param4, param5, param6, param7, param8)
 
-static void call_single_function_rb_thread_blocking_region(void *arg_holder_in);
+static void *call_single_function_rb_thread_blocking_region(void *arg_holder_in);
 
 void *rb_thread_blocking_region_variable_params(int number, ...)
 {
-  va_list param_pt; // TODO handle all the way through 10 args
+  va_list param_pt;
   va_start(param_pt, number);
   int index;
   arg_holder param_storer;
@@ -274,32 +275,34 @@ void *rb_thread_blocking_region_variable_params(int number, ...)
   }
   va_end(param_pt);
 
-  return rb_thread_blocking_region((rb_blocking_function_t *)call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
+  return (void *) rb_thread_blocking_region((rb_blocking_function_t *)call_single_function_rb_thread_blocking_region, (void *) &param_storer, interrupter, 0);
 
 }
 
-static void call_single_function_rb_thread_blocking_region(void *arg_holder_in)
+// used internally
+static void * call_single_function_rb_thread_blocking_region(void *arg_holder_in)
 {
    arg_holder *params_and_func = (arg_holder *) arg_holder_in;
    int param_count = params_and_func->param_count;
    void *result;
-   if(param_count == 3)
+   switch(param_count)
    {
-     void * (*pt2Func)(void *, void *, void *) = params_and_func->func_pointer;
-     result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2]); 
-   }else if(param_count == 6)
-   {
-	void * (*pt2Func)(void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
-	result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5]);
-   }else if(param_count == 8)
-   {
-	void * (*pt2Func)(void *, void *, void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
-	result = (*pt2Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5], params_and_func->args[6], params_and_func->args[7]);
-   }else 
-   {
-	printf("UN nonwn param count--please add it! %d\n", param_count);
-        result = Qnil;
-  }
+   case 3:;
+     void * (*pt3Func)(void *, void *, void *) = params_and_func->func_pointer;
+     result = (*pt3Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2]); 
+     break;
+   case 6:;
+	void * (*pt6Func)(void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
+	result = (*pt6Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5]);
+	break;
+   case 8:;
+	void * (*pt8Func)(void *, void *, void *, void *, void *, void *, void *, void *) = params_and_func->func_pointer;
+	result = (*pt8Func)(params_and_func->args[0], params_and_func->args[1], params_and_func->args[2], params_and_func->args[3], params_and_func->args[4], params_and_func->args[5], params_and_func->args[6], params_and_func->args[7]);
+	break;
+   default:;
+	printf("UNknown param count--please add it! %d\n", param_count);
+        result = (void *) Qnil;
+   }
 
    return result;
 }
@@ -337,14 +340,14 @@ static void optimize_for_async( VALUE obj )
     async_in_progress_set( obj, Qfalse );
 }
 
-// TODO what should this do?
+// TODO does nothing currently
 static void schedule_connect(VALUE obj )
 {
+/* TODO is this old?
     MYSQL* m = GetHandler(obj);
     fd_set read;
 
     struct timeval tv = { tv_sec: m->options.connect_timeout, tv_usec: 0 };
-/* TODO is this old?
     if (rb_thread_select(0, NULL, NULL, NULL, &tv) < 0) {
       rb_raise(eMysql, "connect: timeout");
     }
@@ -361,7 +364,7 @@ static void schedule_connect(VALUE obj )
 }
 
 /*	real_connect(host=nil, user=nil, passwd=nil, db=nil, port=nil, sock=nil, flag=nil)	*/
-static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets run */
+static VALUE real_connect(int argc, VALUE* argv, VALUE klass)
 {
     VALUE host, user, passwd, db, port, sock, flag;
     char *h, *u, *p, *d, *s;
@@ -389,7 +392,7 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 #if MYSQL_VERSION_ID >= 32200
     mysql_init(&myp->handler); /* we get here */
 # ifdef HAVE_TBR
-    if( (int) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, RUBY_UBF_IO, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
+    if( (MYSQL *) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, RUBY_UBF_IO, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
 # else
     if(mysql_real_connect(&myp->handler, h, u, p, d, pp, s, f) == NULL)
 # endif
@@ -408,7 +411,7 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
     myp->query_with_result = Qtrue;
     rb_obj_call_init(obj, argc, argv);
     
-    schedule_connect(obj);
+    //schedule_connect(obj);
 
     return obj;
 }
@@ -473,7 +476,7 @@ static VALUE real_connect2(int argc, VALUE* argv, VALUE obj)
     GetMysqlStruct(obj)->connection = Qtrue;
          
     optimize_for_async(obj);
-    schedule_connect(obj);
+    //schedule_connect(obj);
 
     return obj;
 }
@@ -825,6 +828,7 @@ static VALUE my_stat(VALUE obj)
     return rb_tainted_str_new2(s);
 }
 
+// 1.9 friendly
 typedef struct
 {
  MYSQL *mysql_instance;
@@ -836,7 +840,7 @@ typedef struct
 static VALUE store_result_to_location(void *settings_in)
 {
    mysql_result_to_here_t *settings = (mysql_result_to_here_t *) settings_in;
-   *(settings->store_it_here) = mysql_store_result(settings->mysql_instance); // this one runs a good long while for very large queries 
+   *(settings->store_it_here) = mysql_store_result(settings->mysql_instance); // this one line runs a good long while for very large queries 
    return Qnil;
 }
 
@@ -851,7 +855,7 @@ static VALUE store_result(VALUE obj)
     mysql_result_to_here_t linker;
     linker.mysql_instance = m;
     linker.store_it_here = &res;
-    rb_thread_blocking_region(store_result_to_location, (void *) &linker, RUBY_UBF_IO, 0); /* not sure if this should be RUBY_UBF_IO or RUBY_UBF_PROCESS here -- see Ruby 1.9 ChangeLog */
+    rb_thread_blocking_region(store_result_to_location, (void *) &linker, RUBY_UBF_IO, 0);
 #endif
  
     if (res == NULL)
@@ -956,14 +960,12 @@ static VALUE socket(VALUE obj)
     MYSQL* m = GetHandler(obj);
     return INT2NUM(m->net.fd);
 }
+
 /* socket_type --currently returns true or false, needs some work */
 static VALUE socket_type(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
-    char *answer;
-    VALUE description = vio_description( m->net.vio );
-    answer =  NILorSTRING( description );
-    if(answer)
+    if(vio_description(m->net.vio))
 	return Qtrue; // TODO return a ruby string
     else
 	return Qnil;
@@ -1012,7 +1014,7 @@ static VALUE readable( int argc, VALUE* argv, VALUE obj )
     if ( NIL_P( timeout ) ){
       timeout = m->net.read_timeout;
     }
-
+    // todo could do a rb_blocking_region here
     return ( vio_poll_read( m->net.vio, INT2NUM(timeout) ) == 0 ? Qtrue : Qfalse );
 }
 
@@ -1054,17 +1056,16 @@ static VALUE gc_disabled( VALUE obj ){
 
 static void validate_async_query( VALUE obj )
 {
-  	MYSQL* m = GetHandler(obj);
-
     if( async_in_progress(obj) == Qtrue ){
       async_in_progress_set(obj, Qfalse);
       rb_raise(eMysql, "Query out of sequence: Each call to Mysql#send_query requires a successive Mysql#get_result.");
     }
 }
 
+/* for testing */
 static VALUE simulate_disconnect( VALUE obj )
 {
-    MYSQL* m = GetHandler(obj);
+    MYSQL* m = GetHandler(obj); 
     mysql_library_end();
     return Qnil;
 }
@@ -1093,7 +1094,11 @@ static VALUE send_query(VALUE obj, VALUE sql)
     return Qnil;
 }
 
-/* get_result */
+/* 
+  get_result
+  returns the mysql_result set (default) [i.e. all rows in said said]
+  or nil if query_with_result == false
+ */
 static VALUE get_result(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
@@ -1111,9 +1116,11 @@ static VALUE get_result(VALUE obj)
     
     if (GetMysqlStruct(obj)->query_with_result == Qfalse)
       	return obj;
+
     if (mysql_field_count(m) == 0)
 	    return Qnil; 
-      return store_result(obj);
+
+    return store_result(obj);
 }
 
 static void schedule_query(VALUE obj, VALUE timeout)
@@ -1150,7 +1157,9 @@ static int should_schedule_query(){
     return rb_thread_alone() != 1;
 }
 
-/* async_query(sql,timeout=nil) */
+/* async_query(sql,timeout=nil)
+   optionally take a block
+ */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
     MYSQL* m = GetHandler(obj); 
@@ -1445,7 +1454,7 @@ static VALUE fetch_row(VALUE obj)
     return ary;
 }
 
-/*	process_all_hashes (internal)	*/
+/*	process_all_hashes (internal helper)	*/
 static VALUE process_all_hashes(VALUE obj, VALUE with_table, int build_array, int yield)
 {
     MYSQL_RES* res = GetMysqlRes(obj);

@@ -3,3 +3,10 @@ TODO list:
 Is there a quick, cheap, easy way to test for writability so we don't have to use select itself? Does select take any time that it's worth looking into this?
 
 Some of the tests currently might "think" they are using the ruby select but in reality be using the C select.
+
+gc_disabled is unused
+
+if they call get_result twice consecutively it should blow (and maybe already does).
+
+mingw support
+add slim attributes right in there :)
