@@ -11,6 +11,7 @@ begin
   Mysql.real_connect('localhost', 'root', 'pass', 'db', 3307)# bad port
 rescue Mysql::Error
 end
+
 print "pass"
 
 

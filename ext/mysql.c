@@ -389,7 +389,7 @@ static VALUE real_connect(int argc, VALUE* argv, VALUE klass) /* actually gets r
 #if MYSQL_VERSION_ID >= 32200
     mysql_init(&myp->handler); /* we get here */
 # ifdef HAVE_TBR
-    if( (int) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, 8, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
+    if( (int) rb_thread_blocking_region_variable_params(10, &mysql_real_connect, RUBY_UBF_IO, &myp->handler, h, u, p, d, pp, s, f) == NULL) 
 # else
     if(mysql_real_connect(&myp->handler, h, u, p, d, pp, s, f) == NULL)
 # endif
