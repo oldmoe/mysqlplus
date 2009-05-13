@@ -18,16 +18,7 @@ Gem::Specification.new do |s|
     ext/mysql.c
     lib/mysqlplus.rb
     mysqlplus.gemspec
-    test/c_threaded_test.rb
-    test/evented_test.rb
-    test/native_threaded_test.rb
-    test/test_all_hashes.rb
-    test/test_failure.rb
-    test/test_helper.rb
-    test/test_many_requests.rb
-    test/test_parsing_while_response_is_being_read.rb
-    test/test_threaded_sequel.rb
-  ]
+  ] + Dir.glob('test/*')
   s.rdoc_options = ["--main", "README"]
   s.extra_rdoc_files = ["README"]
   s.extensions << "ext/extconf.rb"

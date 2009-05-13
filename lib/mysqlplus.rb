@@ -1,8 +1,10 @@
-require 'mysql' # this should load the mysqlplus version of mysql.so, as we assume the user has installed mysql as a gem and have not done any previous "require 'mysql'" to have loaded the other
+require File.dirname(__FILE__) + '/mysql' # load our version of mysql--note
+# if someone does a require 'mysql' after a require 'mysqlplus' then their screen will be littered with warnings
+# and the "old" mysql will override the "new" mysqlplus, so be careful.
 
 #
-# Mysqlplus library gives you a [slightly modified] version of the Mysql class
-# See http://www.kitebird.com/articles/ruby-mysql.html for details, as well as the test directory within the library
+# The mysqlplus library is a  [slightly updated] fork of the Mysql class, with asynchronous capability added
+# See http://www.kitebird.com/articles/ruby-mysql.html for details, as well as the test directory within the gem
 #
 class Mysql
   
