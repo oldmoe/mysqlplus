@@ -29,6 +29,10 @@ An enhanced MySQL database driver. With support for async operations and threade
   Same with other scripts that want to use it--just require 'mysqlplus' BEFORE you require 'mysql' and it will 
   load the asynchronous version, then ignore the sequent require 'mysql' call.
 
+== Other helpful mysql utilities:
+  slim attributes http://slim-attributes.rubyforge.org/ boosts mysql speed by using arrays instead of hashed lookup.
+  Hash extension gem also results in speedups when used: http://blog.chak.org/2008/02/09/speeding-up-activerecord-with-hashes-take-2/
+
 === Credits
 
 Aman Gupta, for help in threading support and improved tests
