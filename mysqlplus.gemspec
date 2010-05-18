@@ -22,5 +22,9 @@ Gem::Specification.new do |s|
   s.rdoc_options = ["--main", "README"]
   s.extra_rdoc_files = ["README"]
   s.extensions << "ext/extconf.rb"
-end
 
+  if s.respond_to? :specification_version then
+    current_version = Gem::Specification::CURRENT_SPECIFICATION_VERSION
+    s.specification_version = 3
+  end
+end
