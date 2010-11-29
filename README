@@ -14,6 +14,10 @@ An enhanced MySQL database driver. With support for async operations and threade
 
     sudo gem install mysqlplus-0.1.0.gem -- --with-mysql-config=/opt/local/lib/mysql5/bin/mysql_config
 
+  on OSX, with mysql installed by homebrew:
+
+    sudo gem install mysqlplus -- --with-mysql-config=/usr/local/Cellar/mysql/5.1.51/bin/mysql_config
+  
   on OSX, with x86 mysql (NOT x86_64!) installed from mysql.com:
 
     sudo env ARCHFLAGS="-arch i386" gem install mysqlplus-0.1.0.gem -- \
