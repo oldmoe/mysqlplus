@@ -1157,34 +1157,57 @@ static int should_schedule_query(){
     return rb_thread_alone() != 1;
 }
 
+struct RealAsyncQueryArgs {
+    VALUE obj;
+    MYSQL* m;
+    VALUE sql, timeout;
+};
+
+static VALUE real_async_query(VALUE _args)
+{
+    struct RealAsyncQueryArgs *args = (struct RealAsyncQueryArgs *) _args;
+    
+    async_in_progress_set( args->obj, Qfalse );
+
+    busy(args->obj); 
+
+    send_query( args->obj, args->sql );
+
+    if ( should_schedule_query() ){
+      schedule_query(args->obj, args->timeout);
+    } 
+
+    if (rb_block_given_p()) {
+      rb_yield( get_result(args->obj) );
+      idle( args->obj );
+      return args->obj;
+    }else{
+      idle( args->obj );
+      return get_result(args->obj);
+    }
+}
+
 /* async_query(sql,timeout=nil)
    optionally take a block
  */
 static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
-    MYSQL* m = GetHandler(obj); 
-    VALUE sql, timeout;
+    struct RealAsyncQueryArgs args;
+    int status;
+    VALUE result;
 
-    rb_scan_args(argc, argv, "11", &sql, &timeout);
+    args.obj = obj;
+    args.m = GetHandler(obj);
+    rb_scan_args(argc, argv, "11", &args.sql, &args.timeout);
 
-    async_in_progress_set( obj, Qfalse );
-
-    busy(obj); 
-
-    send_query( obj, sql );
-
-    if ( should_schedule_query() ){
-      schedule_query(obj, timeout);
-    } 
-
-    if (rb_block_given_p()) {
-      rb_yield( get_result(obj) );
-      idle( obj );
-      return obj; 
-    }else{
-      idle( obj );
-      return get_result(obj); 
-    }  
+    result = rb_protect(real_async_query, (VALUE) &args, &status);
+    if (status) {
+        my_close(obj);
+        rb_jump_tag(status);
+        return Qnil;
+    } else {
+        return result;
+    }
 }
 
 #if MYSQL_VERSION_ID >= 40100

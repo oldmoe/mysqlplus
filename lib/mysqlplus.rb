@@ -12,6 +12,9 @@ class Mysql
     send_query(sql)
     select [ (@sockets ||= {})[socket] ||= IO.new(socket) ], nil, nil, nil
     get_result
+  rescue Exception
+    close
+    raise
   end
 
   begin
