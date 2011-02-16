@@ -1194,7 +1194,7 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 {
     struct RealAsyncQueryArgs args;
     int status;
-    VALUE result;
+    VALUE result, ex;
 
     args.obj = obj;
     args.m = GetHandler(obj);
@@ -1202,7 +1202,10 @@ static VALUE async_query(int argc, VALUE* argv, VALUE obj)
 
     result = rb_protect(real_async_query, (VALUE) &args, &status);
     if (status) {
-        my_close(obj);
+        ex = rb_gv_get("$!");
+        if (!RTEST(rb_obj_is_kind_of(ex, eMysql))) {
+            my_close(obj);
+        }
         rb_jump_tag(status);
         return Qnil;
     } else {
