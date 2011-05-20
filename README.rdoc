@@ -6,24 +6,32 @@ An enhanced MySQL database driver. With support for async operations and threade
 
   gem build mysqlplus.gemspec
 
-  on OSX with the default mysql installed:
+=== OS X  
+
+  with the default mysql installed:
 
     sudo gem install mysqlplus-0.1.0.gem -- --with-mysql-config
 
-  on OSX, with mysql installed by macports:
+  with mysql installed by macports:
 
     sudo gem install mysqlplus-0.1.0.gem -- --with-mysql-config=/opt/local/lib/mysql5/bin/mysql_config
 
-  on OSX, with mysql installed by homebrew:
+  with mysql installed by homebrew:
 
     sudo gem install mysqlplus -- --with-mysql-config=/usr/local/Cellar/mysql/5.1.51/bin/mysql_config
   
-  on OSX, with x86 mysql (NOT x86_64!) installed from mysql.com:
+  with x86 mysql (NOT x86_64!) installed from mysql.com:
 
     sudo env ARCHFLAGS="-arch i386" gem install mysqlplus-0.1.0.gem -- \
       --with-mysql-dir=/usr/local/mysql \
       --with-mysql-lib=/usr/local/mysql/lib \
       --with-mysql-include=/usr/local/mysql/include
+
+=== Ubuntu
+
+  apt-get install libmysql++-dev
+  gem install mysqlplus
+
 == Using
   to use within rails
   add require 'mysqlplus' to the top of environment.rb
