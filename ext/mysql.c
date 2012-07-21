@@ -955,7 +955,7 @@ static VALUE query(VALUE obj, VALUE sql)
 }
 
 /* socket */
-static VALUE socket(VALUE obj)
+static VALUE mymy_socket(VALUE obj)
 {
     MYSQL* m = GetHandler(obj);
     return INT2NUM(m->net.fd);
@@ -2518,7 +2518,7 @@ void Init_mysql(void)
     rb_define_method(cMysql, "busy?", is_busy, 0);
     rb_define_method(cMysql, "idle?", is_idle, 0);
     rb_define_method(cMysql, "busy=", busy_set, 1);
-    rb_define_method(cMysql, "socket", socket, 0);
+    rb_define_method(cMysql, "socket", mymy_socket, 0);
     rb_define_method(cMysql, "refresh", refresh, 1);
     rb_define_method(cMysql, "reload", reload, 0);
     rb_define_method(cMysql, "select_db", select_db, 1);
