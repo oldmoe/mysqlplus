@@ -56,9 +56,9 @@ File.open("conftest.c", "w") do |f|
   f.puts src
 end
 if defined? cpp_command then
-  cpp = Config.expand(cpp_command(''))
+  cpp = RbConfig.expand(cpp_command(''))
 else
-  cpp = Config.expand sprintf(CPP, $CPPFLAGS, $CFLAGS, '')
+  cpp = RbConfig.expand sprintf(CPP, $CPPFLAGS, $CFLAGS, '')
 end
 if /mswin32/ =~ RUBY_PLATFORM && !/-E/.match(cpp)
   cpp << " -E"
