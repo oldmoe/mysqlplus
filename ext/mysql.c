@@ -907,7 +907,7 @@ static VALUE query(VALUE obj, VALUE sql)
         rb_raise(eMysql, "query: not connected");
     }
     if (rb_block_given_p()) {
-        #ifdef RUBY_VM
+        #if defined RUBY_VM && defined HAVE_TBR
 	    args.m = m;
 	    args.data = RSTRING_PTR(sql);
 	    args.len = RSTRING_LEN(sql);
@@ -937,7 +937,7 @@ static VALUE query(VALUE obj, VALUE sql)
 	return obj;
     }
     
-    #ifdef RUBY_VM
+    #if defined RUBY_VM && defined HAVE_TBR
 	args.m = m;
 	args.data = RSTRING_PTR(sql);
 	args.len = RSTRING_LEN(sql);
