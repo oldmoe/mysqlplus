@@ -1850,7 +1850,11 @@ static VALUE stmt_bind_result(int argc, VALUE *argv, VALUE obj)
 	}
 	else if (argv[i] == rb_cString)
 	    s->result.bind[i].buffer_type = MYSQL_TYPE_STRING;
-	else if (argv[i] == rb_cNumeric || argv[i] == rb_cInteger || argv[i] == rb_cFixnum)
+	else if (argv[i] == rb_cNumeric || argv[i] == rb_cInteger 
+#ifndef RUBY_INTEGER_UNIFICATION
+                 || argv[i] == rb_cFixnum
+#endif
+                 )
 	    s->result.bind[i].buffer_type = MYSQL_TYPE_LONGLONG;
 	else if (argv[i] == rb_cFloat)
 	    s->result.bind[i].buffer_type = MYSQL_TYPE_DOUBLE;
